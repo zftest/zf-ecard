@@ -7,39 +7,89 @@ Flask 路由 + 核心调度逻辑
 2025-05-14: 新增 format_card_content() 函数
            将 AI 返回的纯文本 card.content 智能转换为结构化 HTML
            支持：段落标题、数字列表、短横线列表、例题块、解析块、警示块
+
+2026-11-03: 工程基线整治（本次改动，旧功能行为保持不变）
+           1) 端口统一：PORT / POSTER_BASE_URL 统一从 config.py 读取
+              修复历史上「海报导出 URL」与 app.run 各自硬编码 5000 的问题
+              ——只改一处会导致 PNG 导出访问错误端口而必然失败
+           2) 新增 create_app() 应用工厂，为后续 /api/v1 蓝图提供挂载点
+              旧路由的 endpoint 名（函数名）全部保持不变
+           3) 错误响应不再回传原始异常字符串，避免泄露文件路径/库版本
+           4) 旧接口补充输入清洗与长度限制，防止超长内容直接打爆 prompt
 """
 import os
 import re
 import json
 import uuid
+import logging
 
-from flask import Flask, render_template, request, jsonify, send_file, url_for, redirect
+from flask import (
+    Flask,
+    render_template,
+    request,
+    jsonify,
+    send_file,
+    url_for,
+    redirect,
+    current_app,
+)
+
 from services.deepseek_client import generate_knowledge_card
 from services.poster_exporter import export_poster_to_png
-from config import SECRET_KEY, DEBUG
+import config as app_config
 
-app = Flask(__name__)
-app.secret_key = SECRET_KEY
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_CACHE_DIR = os.path.join(BASE_DIR, "output", "cache")
 
-# 文件缓存目录：把每次生成的 JSON 数据存到磁盘
-CACHE_DIR = os.path.join(os.path.dirname(__file__), "output", "cache")
-os.makedirs(CACHE_DIR, exist_ok=True)
+logger = logging.getLogger(__name__)
+
+# 旧接口单个字段的最大长度，防止超长内容直接打进 prompt
+MAX_FIELD_LEN = 50
+
+# 生成所需的五个必填字段
+REQUIRED_FIELDS = ("grade", "subject", "book", "publisher", "unit_name")
+
+
+# ─────────────────────────────────────────────────────────────
+# 文件缓存：把每次生成的 JSON 数据存到磁盘
+# ─────────────────────────────────────────────────────────────
+
+def get_cache_dir():
+    """返回缓存目录。
+
+    优先读 app.config["CACHE_DIR"]（测试可注入临时目录），
+    默认仍是 output/cache，保持原有目录与文件名规则不变。
+    """
+    try:
+        return current_app.config.get("CACHE_DIR", DEFAULT_CACHE_DIR)
+    except RuntimeError:
+        # 不在应用上下文里（例如脚本直接调用）时退回默认目录
+        return DEFAULT_CACHE_DIR
 
 
 def cache_save(poster_id, data):
     """把海报数据存到文件"""
-    path = os.path.join(CACHE_DIR, f"{poster_id}.json")
+    cache_dir = get_cache_dir()
+    os.makedirs(cache_dir, exist_ok=True)
+    path = os.path.join(cache_dir, f"{poster_id}.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 def cache_load(poster_id):
     """从文件读取海报数据，不存在返回 None"""
-    path = os.path.join(CACHE_DIR, f"{poster_id}.json")
+    path = os.path.join(get_cache_dir(), f"{poster_id}.json")
     if not os.path.exists(path):
         return None
     with open(path, "r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def clean_field(value, max_len=MAX_FIELD_LEN):
+    """旧接口输入清洗：None → 空串，去首尾空白并截断长度。"""
+    if value is None:
+        return ""
+    return str(value).strip()[:max_len]
 
 
 # ─────────────────────────────────────────────────────────────
@@ -271,137 +321,188 @@ def prepare_card_data(card_data):
 
 
 # ─────────────────────────────────────────────────────────────
+# 旧版路由
+# ─────────────────────────────────────────────────────────────
 
+def register_legacy_routes(app):
+    """在给定 app 上注册旧版页面与接口。
 
-@app.route("/")
-def index():
-    """首页：输入表单"""
-    return render_template("index.html")
-
-
-@app.route("/api/generate", methods=["POST"])
-def api_generate():
+    ⚠️ 这里的函数名（即 Flask endpoint 名）不可修改。
+    代码与模板中存在 url_for("show_poster") 这类**运行期**解析的调用，
+    一旦改名（或把它们搬进 Blueprint 导致 endpoint 变为 "legacy.show_poster"），
+    启动不会报错，直到用户提交表单时才抛 BuildError → 500。
+    因此这些函数名与原 app.py 实现严格保持一致。
     """
-    AJAX 接口：接收表单参数 → 调用 DeepSeek → 返回 poster_id
-    前端拿到 poster_id 后跳转到 /poster/<poster_id>
+
+    @app.route("/")
+    def index():
+        """首页：输入表单"""
+        return render_template("index.html")
+
+    @app.route("/api/generate", methods=["POST"])
+    def api_generate():
+        """
+        AJAX 接口：接收表单参数 → 调用 DeepSeek → 返回 poster_id
+        前端拿到 poster_id 后跳转到 /poster/<poster_id>
+        """
+        data = request.get_json(silent=True) or {}
+
+        fields = {name: clean_field(data.get(name, "")) for name in REQUIRED_FIELDS}
+        stage = clean_field(data.get("stage", "小学"), max_len=10) or "小学"
+
+        if not all(fields.values()):
+            return jsonify({"error": "请填写完整信息"}), 400
+
+        try:
+            card_data = generate_knowledge_card(
+                stage=stage, **fields
+            )
+        except Exception:
+            # 详细堆栈只进日志，不回传给前端
+            logger.exception("[Generate] DeepSeek 调用失败")
+            return jsonify({"error": "AI 生成失败，请稍后重试"}), 500
+
+        # 生成唯一 ID，存入文件缓存（重启 Flask 也不会丢失）
+        poster_id = uuid.uuid4().hex[:12]
+        cache_save(poster_id, card_data)
+
+        logger.info("[Generate] 海报已生成，ID=%s", poster_id)
+        return jsonify({"poster_id": poster_id})
+
+    @app.route("/generate", methods=["POST"])
+    def generate_poster_form():
+        """
+        表单提交接口：接收表单参数 → 调用 DeepSeek → 直接重定向到海报页
+        用于 <form target="_blank"> 在新标签页打开海报
+        """
+        fields = {name: clean_field(request.form.get(name, "")) for name in REQUIRED_FIELDS}
+        stage = clean_field(request.form.get("stage", "小学"), max_len=10) or "小学"
+
+        if not all(fields.values()):
+            return "请填写完整信息", 400
+
+        try:
+            card_data = generate_knowledge_card(stage=stage, **fields)
+        except Exception:
+            logger.exception("[Generate] DeepSeek 调用失败（表单提交）")
+            return "AI 生成失败，请稍后重试", 500
+
+        poster_id = uuid.uuid4().hex[:12]
+        cache_save(poster_id, card_data)
+
+        logger.info("[Generate] 海报已生成，ID=%s（表单提交）", poster_id)
+        return redirect(url_for("show_poster", poster_id=poster_id))
+
+    @app.route("/poster/<poster_id>")
+    def show_poster(poster_id):
+        """海报预览页：渲染动态 HTML 海报"""
+        card_data = cache_load(poster_id)
+        if not card_data:
+            return "海报已过期，请重新生成", 404
+
+        # 2025-05-14: 对 card.content 进行 HTML 格式化，确保内容层级清晰
+        card_data = prepare_card_data(card_data)
+
+        # 检查是否使用新版布局
+        use_demo = request.args.get("demo", "0") == "1"
+        template = "poster-demo.html" if use_demo else "poster.html"
+        return render_template(template, data=card_data, poster_id=poster_id)
+
+    @app.route("/poster-demo/<poster_id>")
+    def show_poster_demo(poster_id):
+        """海报预览页（新版左右分栏布局）"""
+        card_data = cache_load(poster_id)
+        if not card_data:
+            return "海报已过期，请重新生成", 404
+
+        # 2025-05-14: 对 card.content 进行 HTML 格式化
+        card_data = prepare_card_data(card_data)
+
+        return render_template("poster-demo.html", data=card_data, poster_id=poster_id)
+
+    @app.route("/api/export/<poster_id>")
+    def api_export(poster_id):
+        """
+        导出 PNG：Playwright 直接访问 Flask HTTP URL 截图
+        - Playwright 访问 127.0.0.1（服务器本地），保证 CSS/字体完整渲染
+        - 数据从文件缓存读取，不依赖内存
+        - 目标地址统一取自 config.POSTER_BASE_URL，不再硬编码端口
+        """
+        card_data = cache_load(poster_id)
+        if not card_data:
+            return jsonify({"error": "海报数据不存在，请重新生成"}), 404
+
+        # Playwright 在服务器本地访问，与客户端访问 IP 无关
+        base_url = current_app.config["POSTER_BASE_URL"].rstrip("/")
+        poster_url = f"{base_url}/poster/{poster_id}?export=1"
+
+        try:
+            png_path = export_poster_to_png(poster_url, f"poster_{poster_id}.png")
+        except Exception:
+            logger.exception("[Export] 截图失败 poster_id=%s", poster_id)
+            return jsonify({"error": "截图失败，请稍后重试"}), 500
+
+        return send_file(
+            png_path,
+            mimetype="image/png",
+            as_attachment=True,
+            download_name=f"知识卡_{poster_id}.png"
+        )
+
+    @app.route("/loading")
+    def loading():
+        """生成中等待页（可选）"""
+        return render_template("loading.html")
+
+
+# ─────────────────────────────────────────────────────────────
+# 应用工厂
+# ─────────────────────────────────────────────────────────────
+
+def create_app(config_object=None):
+    """创建 Flask 应用实例。
+
+    :param config_object: 可选的配置覆盖字典，测试用它注入临时缓存目录等。
     """
-    data = request.get_json(force=True)
-    grade     = data.get("grade", "")
-    subject   = data.get("subject", "")
-    book      = data.get("book", "")
-    publisher = data.get("publisher", "")
-    unit_name = data.get("unit_name", "")
-    stage     = data.get("stage", "小学")
+    app = Flask(__name__)
 
-    if not all([grade, subject, book, publisher, unit_name]):
-        return jsonify({"error": "请填写完整信息"}), 400
-
-    try:
-        card_data = generate_knowledge_card(grade, subject, book, publisher, unit_name, stage=stage)
-    except Exception as e:
-        print(f"[Generate] DeepSeek 调用失败：{e}")
-        return jsonify({"error": f"AI 生成失败：{str(e)}"}), 500
-
-    # 生成唯一 ID，存入文件缓存（重启 Flask 也不会丢失）
-    poster_id = uuid.uuid4().hex[:12]
-    cache_save(poster_id, card_data)
-
-    print(f"[Generate] 海报已生成，ID={poster_id}")
-    return jsonify({"poster_id": poster_id})
-
-
-@app.route("/generate", methods=["POST"])
-def generate_poster_form():
-    """
-    表单提交接口：接收表单参数 → 调用 DeepSeek → 直接重定向到海报页
-    用于 <form target="_blank"> 在新标签页打开海报
-    """
-    grade     = request.form.get("grade", "")
-    subject   = request.form.get("subject", "")
-    book      = request.form.get("book", "")
-    publisher = request.form.get("publisher", "")
-    unit_name = request.form.get("unit_name", "")
-    stage     = request.form.get("stage", "小学")
-
-    if not all([grade, subject, book, publisher, unit_name]):
-        return "请填写完整信息", 400
-
-    try:
-        card_data = generate_knowledge_card(grade, subject, book, publisher, unit_name, stage=stage)
-    except Exception as e:
-        print(f"[Generate] DeepSeek 调用失败：{e}")
-        return f"AI 生成失败：{str(e)}", 500
-
-    poster_id = uuid.uuid4().hex[:12]
-    cache_save(poster_id, card_data)
-
-    print(f"[Generate] 海报已生成，ID={poster_id}")
-    return redirect(url_for("show_poster", poster_id=poster_id))
-
-
-@app.route("/poster/<poster_id>")
-def show_poster(poster_id):
-    """海报预览页：渲染动态 HTML 海报"""
-    card_data = cache_load(poster_id)
-    if not card_data:
-        return "海报已过期，请重新生成", 404
-
-    # 2025-05-14: 对 card.content 进行 HTML 格式化，确保内容层级清晰
-    card_data = prepare_card_data(card_data)
-
-    # 检查是否使用新版布局
-    use_demo = request.args.get("demo", "0") == "1"
-    template = "poster-demo.html" if use_demo else "poster.html"
-    return render_template(template, data=card_data, poster_id=poster_id)
-
-
-@app.route("/poster-demo/<poster_id>")
-def show_poster_demo(poster_id):
-    """海报预览页（新版左右分栏布局）"""
-    card_data = cache_load(poster_id)
-    if not card_data:
-        return "海报已过期，请重新生成", 404
-
-    # 2025-05-14: 对 card.content 进行 HTML 格式化
-    card_data = prepare_card_data(card_data)
-
-    return render_template("poster-demo.html", data=card_data, poster_id=poster_id)
-
-
-@app.route("/api/export/<poster_id>")
-def api_export(poster_id):
-    """
-    导出 PNG：Playwright 直接访问 Flask HTTP URL 截图
-    - Playwright 访问 127.0.0.1（服务器本地），保证 CSS/字体完整渲染
-    - 数据从文件缓存读取，不依赖内存
-    """
-    card_data = cache_load(poster_id)
-    if not card_data:
-        return jsonify({"error": "海报数据不存在，请重新生成"}), 404
-
-    # Playwright 在服务器本地访问（127.0.0.1），与客户端访问IP无关
-    poster_url = f"http://127.0.0.1:5000/poster/{poster_id}?export=1"
-
-    try:
-        png_path = export_poster_to_png(poster_url, f"poster_{poster_id}.png")
-    except Exception as e:
-        print(f"[Export] 截图失败：{e}")
-        return jsonify({"error": f"截图失败：{str(e)}"}), 500
-
-    return send_file(
-        png_path,
-        mimetype="image/png",
-        as_attachment=True,
-        download_name=f"知识卡_{poster_id}.png"
+    app.secret_key = app_config.SECRET_KEY
+    app.config.update(
+        DEBUG=getattr(app_config, "DEBUG", False),
+        CACHE_DIR=DEFAULT_CACHE_DIR,
+        POSTER_BASE_URL=getattr(
+            app_config,
+            "POSTER_BASE_URL",
+            f"http://127.0.0.1:{getattr(app_config, 'PORT', 5000)}",
+        ),
     )
+    if config_object:
+        app.config.update(config_object)
+
+    # 中文不转义成 \uXXXX，前端直接可读
+    app.json.ensure_ascii = False
+
+    os.makedirs(app.config["CACHE_DIR"], exist_ok=True)
+
+    # 旧版页面与接口（保持不变）
+    register_legacy_routes(app)
+
+    # ── 新增功能蓝图在此接入（下一批次）─────────────────────────
+    # from api.v1 import bp as api_v1_bp
+    # app.register_blueprint(api_v1_bp)
+
+    return app
 
 
-@app.route("/loading")
-def loading():
-    """生成中等待页（可选）"""
-    return render_template("loading.html")
+# 模块级实例：兼容 `flask run` 与 `gunicorn app:app`
+app = create_app()
 
 
 if __name__ == "__main__":
-    os.makedirs("output", exist_ok=True)
-    app.run(host="0.0.0.0", port=5000, debug=DEBUG)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    os.makedirs(app.config["CACHE_DIR"], exist_ok=True)
+    # 端口统一取自 config.PORT
+    app.run(host="0.0.0.0", port=app_config.PORT, debug=app_config.DEBUG)
