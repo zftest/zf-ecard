@@ -48,6 +48,7 @@ logs/
 frontend/node_modules/
 frontend/dist/
 node_modules/
+static/spa/
 package-lock.json.bak
 
 # 词库数据（版权文件，不入库）
