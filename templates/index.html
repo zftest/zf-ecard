@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识卡海报生成器</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+    <style>
+        /* ========== 学科切换卡片样式 ========== */
+        .subject-selector {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        .subject-card {
+            flex: 1;
+            max-width: 160px;
+            padding: 20px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fff;
+        }
+        .subject-card:hover {
+            border-color: #bdbdbd;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .subject-card.active {
+            border-color: var(--subject-color);
+            background: var(--subject-bg);
+        }
+        .subject-card .icon {
+            font-size: 36px;
+            margin-bottom: 8px;
+        }
+        .subject-card .name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+        }
+        .subject-card .desc {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+        .subject-card.active .name {
+            color: var(--subject-color);
+        }
+
+        /* 学科主题颜色 */
+        .subject-card[data-subject="数学"] { --subject-color: #7C3AED; --subject-bg: #f5f3ff; }
+        .subject-card[data-subject="英语"] { --subject-color: #2563EB; --subject-bg: #eff6ff; }
+        .subject-card[data-subject="语文"] { --subject-color: #059669; --subject-bg: #ecfdf5; }
+
+        /* 学段选择器样式（与学科卡片呼应） */
+        .stage-selector {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        .stage-chip {
+            padding: 10px 22px;
+            border: 2px solid #e0e0e0;
+            border-radius: 999px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #555;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .stage-chip:hover { border-color: #bdbdbd; }
+        .stage-chip.active {
+            border-color: #4F46E5;
+            background: #eef2ff;
+            color: #4F46E5;
+        }
+
+        /* 隐藏原来的学科下拉框（改用卡片选择） */
+        #subjectGroup { display: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <h1>📚 单元知识卡海报生成器</h1>
+        <p class="subtitle">三科专属提示词 · 小学 / 初中 / 高中 自适应 · AI 一键生成彩色知识卡片</p>
+    </header>
+
+    <!-- 2026-05-14: 改为表单直接提交，target="_blank" 在新标签页打开海报 -->
+    <form id="generateForm" class="form-card" method="POST" action="/generate" target="_blank">
+
+        <!-- ========== 学科切换卡片 ========== -->
+        <div class="subject-selector" id="subjectSelector">
+            <div class="subject-card active" data-subject="数学" onclick="selectSubject('数学')">
+                <div class="icon">🔢</div>
+                <div class="name">数学</div>
+                <div class="desc">公式·定律·培优</div>
+            </div>
+            <div class="subject-card" data-subject="英语" onclick="selectSubject('英语')">
+                <div class="icon">🔤</div>
+                <div class="name">英语</div>
+                <div class="desc">词汇·语法·交际</div>
+            </div>
+            <div class="subject-card" data-subject="语文" onclick="selectSubject('语文')">
+                <div class="icon">📖</div>
+                <div class="name">语文</div>
+                <div class="desc">字词·阅读·写作</div>
+            </div>
+        </div>
+
+        <!-- 隐藏的学科值（供表单提交） -->
+        <input type="hidden" id="subject" name="subject" value="数学">
+
+        <!-- ========== 学段切换（小学/初中/高中） ========== -->
+        <div class="stage-selector" id="stageSelector">
+            <div class="stage-chip active" data-stage="小学" onclick="selectStage('小学')">小学</div>
+            <div class="stage-chip" data-stage="初中" onclick="selectStage('初中')">初中</div>
+            <div class="stage-chip" data-stage="高中" onclick="selectStage('高中')">高中</div>
+        </div>
+
+        <!-- 隐藏的学段值（供表单提交） -->
+        <input type="hidden" id="stage" name="stage" value="小学">
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="grade">年级</label>
+                <select id="grade" name="grade" required>
+                    <option value="">请选择</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="book">册别</label>
+                <select id="book" name="book" required>
+                    <option value="">请选择</option>
+                    <option value="上册">上册</option>
+                    <option value="下册">下册</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="publisher">出版社</label>
+                <select id="publisher" name="publisher" required>
+                    <option value="">请选择</option>
+                    <option value="人教版">人教版</option>
+                    <option value="北师大版">北师大版</option>
+                    <option value="苏教版">苏教版</option>
+                    <option value="外研版">外研版</option>
+                    <option value="译林版">译林版</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group full-width">
+            <label for="unit_name">单元名称</label>
+            <input type="text" id="unit_name" name="unit_name"
+                   placeholder="例如：第一单元、比例、分数加法、第三单元..." required>
+        </div>
+
+        <button type="submit" class="btn-generate" id="btnGenerate">
+            <span class="btn-text">🤖 AI 一键生成知识卡</span>
+            <span class="btn-loading" style="display:none;">生成中，请稍候...</span>
+        </button>
+
+        <p class="form-hint">生成约需 15~30 秒，请耐心等待</p>
+        <div class="error-msg" id="errorMsg" style="display:none;"></div>
+    </form>
+</div>
+
+<!-- 2026-05-14: 通过 localStorage storage 事件监听海报页通知 -->
+<script>
+    // 监听 localStorage 变化，海报页加载完成后会写入标记
+    window.addEventListener("storage", function(event) {
+        if (event.key && event.key.indexOf("poster_ready_") === 0) {
+            console.log("[首页] 收到海报加载完成通知 (localStorage)");
+            var btn = document.getElementById("btnGenerate");
+            var btnText = btn.querySelector(".btn-text");
+            var btnLoading = btn.querySelector(".btn-loading");
+            if (btn) {
+                btn.disabled = false;
+                btnText.style.display = "inline";
+                btnLoading.style.display = "none";
+                console.log("[首页] 按钮已恢复");
+            }
+        }
+    });
+</script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+    // 学科切换函数
+    function selectSubject(subject) {
+        // 更新隐藏表单值
+        document.getElementById('subject').value = subject;
+
+        // 更新卡片选中状态
+        document.querySelectorAll('.subject-card').forEach(card => {
+            card.classList.remove('active');
+        });
+        document.querySelector(`.subject-card[data-subject="${subject}"]`).classList.add('active');
+    }
+
+    // 学段切换函数（驱动年级级联）
+    function selectStage(stage) {
+        document.getElementById('stage').value = stage;
+        document.querySelectorAll('.stage-chip').forEach(chip => {
+            chip.classList.remove('active');
+        });
+        document.querySelector(`.stage-chip[data-stage="${stage}"]`).classList.add('active');
+        populateGrades();
+    }
+
+    // 学段 → 年级 级联
+    const GRADE_OPTIONS = {
+        "小学": ["一年级", "二年级", "三年级", "四年级", "五年级", "六年级"],
+        "初中": ["七年级", "八年级", "九年级"],
+        "高中": ["高一", "高二", "高三"]
+    };
+
+    function populateGrades() {
+        const stage = document.getElementById("stage").value;
+        const gradeSel = document.getElementById("grade");
+        const grades = GRADE_OPTIONS[stage] || GRADE_OPTIONS["小学"];
+        gradeSel.innerHTML = '<option value="">请选择</option>' +
+            grades.map(g => `<option value="${g}">${g}</option>`).join("");
+    }
+
+    // 初始化年级选项
+    populateGrades();
+</script>
+</body>
+</html>

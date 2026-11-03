@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Flask
+instance/
+*.sqlite
+*.db
+
+# Environment
+.env
+.env.local
+venv/
+.venv/
+
+# Secrets — NEVER commit to git
+config.py
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Generated files ( posters & cache )
+output/
+posters/
+static/posters/
+posters_cache.json
+instance/poster_cache.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# ===== 新增功能（前后端分离）=====
+# 前端依赖与构建产物
+frontend/node_modules/
+frontend/dist/
+node_modules/
+package-lock.json.bak
+
+# 词库数据（版权文件，不入库）
+data/
+!data/.gitkeep
+
+# 音频资产（真人录音/TTS，体积大且有许可约束）
+*.mp3
+*.wav
+*.m4a
+*.ogg
+
+# PDF 词库原件（版权风险，只在本地暂存）
+*.pdf
+
+# 导入批次临时文件
+imports/
+tmp/
+.tmp/
+
+# SQLite 运行时库
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm

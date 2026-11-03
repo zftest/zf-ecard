@@ -1,0 +1,274 @@
+/* =============================================
+   知识卡海报样式 — 彩色多卡片风格
+   对应 poster.html 模板
+   ============================================= */
+
+/* ---------- 全局 ---------- */
+body {
+    margin: 0;
+    background: #f0f2f5;
+    font-family: 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+    color: #333;
+}
+
+/* ---------- 海报最外层 ---------- */
+.poster-wrapper {
+    max-width: 1200px;
+    margin: 32px auto;
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 12px 48px rgba(0,0,0,0.12);
+    overflow: visible;   /* 截图时不截断内容 */
+    padding-bottom: 60px;   /* 给底部下载栏留空间 */
+}
+
+/* ---------- 顶部标题栏 ---------- */
+.poster-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 40px;
+    background: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+    color: #fff;
+}
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.header-icon { font-size: 42px; }
+.header-title {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+.header-sub { font-size: 14px; opacity: 0.85; }
+.header-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+.header-tags .tag {
+    background: rgba(255,255,255,0.25);
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    backdrop-filter: blur(4px);
+}
+
+/* ---------- 主体两列 ---------- */
+.poster-body.two-col {
+    display: flex;
+    gap: 24px;
+    padding: 28px 32px;
+    align-items: flex-start;
+}
+.col-left  { flex: 1.1; display: flex; flex-direction: column; gap: 20px; }
+.col-right { flex: 0.9; display: flex; flex-direction: column; gap: 20px; }
+
+/* ---------- 通用卡片 ---------- */
+.card {
+    border-radius: 16px;
+    padding: 20px 24px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+}
+.card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.card-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 16px;
+    color: #fff;
+    flex-shrink: 0;
+}
+.card h2 { font-size: 18px; font-weight: 700; }
+
+/* 各卡片颜色主题 */
+.card-blue     { background: #e8f4fd; }
+.card-blue .card-num,
+.card-blue h2   { background: #2196f3; color: #fff; }
+.card-blue h2   { background: none; color: #1565c0; }
+
+.card-purple   { background: #f3e5f5; }
+.card-purple .card-num { background: #9c27b0; }
+.card-purple h2 { color: #6a1b9a; background: none; }
+
+.card-orange   { background: #fff8e1; }
+.card-orange .card-num { background: #ff9800; }
+.card-orange h2 { color: #e65100; background: none; }
+
+.card-green    { background: #e8f5e9; }
+.card-green .card-num { background: #4caf50; }
+.card-green h2 { color: #2e7d32; background: none; }
+
+.card-red      { background: #ffebee; }
+.card-red .card-num { background: #f44336; }
+.card-red h2 { color: #c62828; background: none; }
+
+.card-teal     { background: #e0f7fa; }
+.card-teal .card-num { background: #0097a7; }
+.card-teal h2 { color: #006064; background: none; }
+
+.card-indigo   { background: #e8eaf6; }
+.card-indigo .card-num { background: #3f51b5; }
+.card-indigo h2 { color: #1a237e; background: none; }
+
+/* ---------- 一、主要内容：知识点列表 ---------- */
+.kp-list { display: flex; flex-direction: column; gap: 12px; }
+.kp-item { }
+.kp-name { font-size: 16px; font-weight: 700; color: #1565c0; margin-bottom: 6px; }
+.kp-formula {
+    display: inline-block;
+    background: #bbdefb;
+    padding: 4px 14px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #0d47a1;
+}
+.kp-def { font-size: 14px; line-height: 1.7; color: #444; margin-bottom: 8px; }
+.kp-components { font-size: 13px; color: #555; margin-bottom: 8px; }
+.chip {
+    display: inline-block;
+    background: #c5cae9;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin: 0 2px;
+}
+.kp-example {
+    background: #fff;
+    border-left: 4px solid #2196f3;
+    padding: 10px 14px;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    margin: 8px 0;
+}
+.example-q { font-weight: 600; margin-bottom: 6px; }
+.example-steps { color: #555; margin-bottom: 6px; line-height: 1.8; }
+.example-ans { color: #2e7d32; font-weight: 600; }
+.kp-rule {
+    background: linear-gradient(90deg, #fff9c4, #fffde7);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #f57f17;
+    margin-top: 6px;
+}
+.kp-divider { border: none; border-top: 1px dashed #bbdefb; margin: 12px 0; }
+
+/* ---------- 二、重点难点：两栏 ---------- */
+.two-sub-col { display: flex; gap: 20px; }
+.sub-block { flex: 1; }
+.sub-title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.key-title { color: #2e7d32; }
+.diff-title { color: #c62828; }
+.check-list { list-style: none; padding: 0; }
+.check-list li::before { content: "✅ "; }
+.cross-list { list-style: none; padding: 0; }
+.cross-list li::before { content: "⚡ "; }
+
+/* ---------- 三、老师有话说 ---------- */
+.teacher-content { display: flex; gap: 14px; align-items: flex-start; }
+.teacher-avatar { font-size: 40px; }
+.teacher-words { font-size: 14px; line-height: 1.8; color: #555; margin-bottom: 8px; }
+.teacher-encourage {
+    font-size: 15px;
+    font-weight: 700;
+    color: #e65100;
+    background: linear-gradient(90deg, #fff8e1, #fffde7);
+    padding: 6px 14px;
+    border-radius: 8px;
+    display: inline-block;
+}
+
+/* ---------- 四、复习口诀 ---------- */
+.rhyme-list { display: flex; flex-direction: column; gap: 10px; }
+.rhyme-item {
+    background: #c8e6c9;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #1b5e20;
+}
+
+/* ---------- 五、易错提醒 ---------- */
+.mistake-list { display: flex; flex-direction: column; gap: 10px; }
+.mistake-item { }
+.mistake-desc { font-size: 14px; font-weight: 600; color: #b71c1c; margin-bottom: 6px; }
+.mistake-compare { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.wrong   { background: #ffcdd2; color: #b71c1c; padding: 3px 10px; border-radius: 6px; }
+.arrow   { color: #999; font-size: 18px; }
+.correct { background: #c8e6c9; color: #1b5e20; padding: 3px 10px; border-radius: 6px; }
+.mistake-tip { font-size: 12px; color: #777; margin-top: 4px; }
+
+/* ---------- 六、思维拓展 ---------- */
+.section-intro { font-size: 14px; color: #555; margin-bottom: 12px; line-height: 1.7; }
+.scenario-grid { display: flex; flex-wrap: wrap; gap: 10px; }
+.scenario-item {
+    background: #b2ebf2;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #006064;
+    font-weight: 600;
+}
+
+/* ---------- 七、考试高频题型 ---------- */
+.exam-list { padding-left: 20px; }
+.exam-list li {
+    font-size: 14px;
+    line-height: 2;
+    color: #333;
+    font-weight: 500;
+}
+
+/* ---------- 底部水印 ---------- */
+.poster-footer {
+    text-align: center;
+    padding: 16px;
+    font-size: 13px;
+    color: #999;
+    border-top: 1px solid #eee;
+    margin: 0 32px;
+}
+
+/* ---------- 下载按钮栏 ---------- */
+.download-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(8px);
+    padding: 12px 0;
+    text-align: center;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.08);
+    z-index: 100;
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+}
+.btn-download, .btn-back {
+    padding: 10px 28px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: transform 0.15s;
+    display: inline-block;
+}
+.btn-download {
+    background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+    color: #fff;
+}
+.btn-back {
+    background: #eee;
+    color: #555;
+}
+.btn-download:hover, .btn-back:hover { transform: translateY(-2px); }

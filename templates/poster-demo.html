@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ data.meta.poster_title or '知识卡片' }}</title>
+    <style>
+        /* ========== 基础重置 ========== */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        /* ========== 统一主题色（中性靛蓝） ========== */
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #818CF8;
+            --primary-dark: #3730A3;
+            --bg-left: #ffffff;
+            --bg-right: #f8fafc;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-light: #64748b;
+        }
+
+        /* ========== 卡片内容解析样式 ========== */
+        .card-content {
+            line-height: 1.8;
+            font-size: 14px;
+        }
+        .card-content p {
+            margin-bottom: 10px;
+        }
+        .card-content strong {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* 列表项样式 */
+        .card-content ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .card-content li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 8px;
+        }
+        .card-content li::before {
+            content: '•';
+            position: absolute;
+            left: 6px;
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        /* 重点高亮 */
+        .highlight {
+            background: linear-gradient(120deg, #fef3c7 0%, #fef3c7 100%);
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #92400e;
+            font-weight: 500;
+        }
+
+        /* 例题块 */
+        .example-block {
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 12px 14px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .example-q {
+            font-weight: 600;
+            color: #166534;
+            margin-bottom: 8px;
+        }
+        .example-ans {
+            color: #15803d;
+            font-weight: 500;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px dashed #bbf7d0;
+        }
+
+        /* 技巧/口诀 */
+        .tip-block {
+            background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+            border-left: 4px solid var(--primary);
+            padding: 10px 14px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+            color: var(--primary-dark);
+        }
+        .tip-block::before {
+            content: '💡 ';
+        }
+
+        /* 警示/易错 */
+        .warning-block {
+            background: #fef2f2;
+            border-left: 4px solid #ef4444;
+            padding: 10px 14px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+            color: #991b1b;
+        }
+        .warning-block::before {
+            content: '⚠️ ';
+        }
+
+        /* ========== 海报主体 ========== */
+        .poster-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--bg-right);
+            min-height: 100vh;
+        }
+
+        /* ========== 顶部标题栏 ========== */
+        .poster-header {
+            padding: 28px 36px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .poster-header::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        .header-main {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 1;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .subject-icon {
+            width: 70px;
+            height: 70px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            backdrop-filter: blur(4px);
+        }
+        .header-title {
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+        .header-meta {
+            font-size: 15px;
+            opacity: 0.9;
+        }
+        .header-right {
+            text-align: right;
+        }
+        .grade-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 24px;
+            border-radius: 25px;
+            font-size: 20px;
+            font-weight: bold;
+            backdrop-filter: blur(4px);
+        }
+
+        /* ========== 左右分栏布局 ========== */
+        .poster-body {
+            padding: 28px 36px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        /* 左侧主栏 */
+        .column-left {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 右侧边栏 */
+        .column-right {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* ========== 统一卡片样式 ========== */
+        .card {
+            background: var(--bg-left);
+            border-radius: 12px;
+            padding: 20px 22px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+            position: relative;
+            transition: box-shadow 0.2s;
+        }
+        .card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        /* 卡片顶部色条 */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+            border-radius: 12px 12px 0 0;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--border);
+        }
+        .card-num {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+        .card-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: var(--text);
+            letter-spacing: 0.5px;
+        }
+
+        /* ========== 底部水印 ========== */
+        .poster-footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-light);
+            font-size: 13px;
+            background: var(--bg-left);
+            border-top: 1px solid var(--border);
+        }
+
+        /* ========== 下载工具栏 ========== */
+        .download-bar {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            gap: 12px;
+            z-index: 100;
+        }
+        .download-bar a {
+            padding: 12px 24px;
+            background: var(--primary);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            transition: all 0.2s;
+        }
+        .download-bar a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+        }
+        .btn-back {
+            background: #64748b !important;
+            box-shadow: 0 4px 12px rgba(100, 116, 139, 0.3) !important;
+        }
+        .btn-back:hover {
+            box-shadow: 0 6px 16px rgba(100, 116, 139, 0.4) !important;
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 900px) {
+            .poster-body {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+            .header-title {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="poster-wrapper">
+
+    <!-- ========== 顶部标题栏 ========== -->
+    <header class="poster-header">
+        <div class="header-main">
+            <div class="header-left">
+                <div class="subject-icon">
+                    {% if data.meta.subject == '数学' %}🔢
+                    {% elif data.meta.subject == '英语' %}🔤
+                    {% elif data.meta.subject == '语文' %}📖
+                    {% else %}📚{% endif %}
+                </div>
+                <div>
+                    <h1 class="header-title">{{ data.meta.poster_title or (data.meta.grade + data.meta.book + ' · ' + data.meta.subject + ' · ' + data.meta.unit_name) }}</h1>
+                    <p class="header-meta">{{ data.meta.publisher }} · {{ data.meta.grade }} · 第{{ data.meta.unit_name }}单元</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="grade-badge">{{ data.meta.grade }}</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========== 左右分栏主体 ========== -->
+    <div class="poster-body">
+        <!-- 左侧：前3张卡片 -->
+        <div class="column-left">
+            {% for card in data.cards[:3] %}
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-num">{{ loop.index }}</span>
+                    <h2 class="card-title">{{ card.title }}</h2>
+                </div>
+                <div class="card-content">
+                    {{ card.content | safe }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 右侧：后3张卡片 -->
+        <div class="column-right">
+            {% for card in data.cards[3:] %}
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-num">{{ loop.index + 3 }}</span>
+                    <h2 class="card-title">{{ card.title }}</h2>
+                </div>
+                <div class="card-content">
+                    {{ card.content | safe }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ========== 底部水印 ========== -->
+    <footer class="poster-footer">
+        <span>🤖 AI 知识卡生成器 · {{ data.meta.subject }}专属提示词 · {{ data.meta.publisher }}教材同步</span>
+    </footer>
+
+    <!-- ========== 下载工具栏 ========== -->
+    <div class="download-bar" id="downloadBar">
+        <a href="{{ url_for('api_export', poster_id=poster_id) }}">⬇️ 下载 PNG</a>
+        <a href="{{ url_for('index') }}" class="btn-back">🔄 重新生成</a>
+    </div>
+
+</div>
+
+<script>
+// 截图时隐藏下载按钮
+if (window.location.search.includes('export=1')) {
+    document.getElementById('downloadBar').style.display = 'none';
+}
+</script>
+</body>
+</html>

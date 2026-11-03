@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- 2025-05-13: 修改meta为data.meta以匹配app.py传递的变量名 -->
+    <title>{{ data.meta.poster_title }} - 知识海报</title>
+    <style>
+        /* ========== 基础重置 ========== */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.7;
+        }
+
+        /* ========== 统一主题色 ========== */
+        /* 2025-05-13: 修改meta.theme为data.meta.theme */
+        :root {
+            --primary: {{ data.meta.theme.primary }};
+            --primary-light: {{ data.meta.theme.primary_light }};
+            --primary-dark: {{ data.meta.theme.primary_dark }};
+            --bg-left: #ffffff;
+            --bg-right: #f8fafc;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --highlight-bg: #fef3c7;
+            --highlight-text: #92400e;
+            --example-bg: #f0fdf4;
+            --example-border: #22c55e;
+            --example-text: #166534;
+            --tip-bg: #eef2ff;
+            --tip-border: var(--primary);
+            --tip-text: var(--primary-dark);
+            --warning-bg: #fef2f2;
+            --warning-border: #ef4444;
+            --warning-text: #991b1b;
+        }
+
+        /* ========== 海报主体 ========== */
+        .poster-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--bg-right);
+            min-height: 100vh;
+        }
+
+        /* ========== 顶部标题栏 ========== */
+        .poster-header {
+            padding: 28px 36px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .poster-header::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        .header-main {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 1;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .subject-icon {
+            width: 70px;
+            height: 70px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            backdrop-filter: blur(4px);
+        }
+        .header-title {
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+        .header-meta {
+            font-size: 15px;
+            opacity: 0.9;
+        }
+        .header-right {
+            text-align: right;
+        }
+        .grade-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 24px;
+            border-radius: 25px;
+            font-size: 20px;
+            font-weight: bold;
+            backdrop-filter: blur(4px);
+        }
+
+        /* ========== 左右分栏布局（弹性高度） ========== */
+        .poster-body {
+            padding: 28px 36px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .column-left, .column-right {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* ========== 统一卡片样式（高度自适应） ========== */
+        .card {
+            background: var(--bg-left);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+            position: relative;
+            transition: box-shadow 0.2s;
+            overflow: hidden;
+        }
+        .card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        /* 卡片顶部色条 */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px 14px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(to bottom, #fafbfc, #fff);
+        }
+        .card-num {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .card-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--text);
+            letter-spacing: 0.5px;
+        }
+
+        /* ========== 卡片内容（核心：弹性布局） ========== */
+        .card-content {
+            padding: 16px 20px 20px;
+            font-size: 14px;
+            color: var(--text);
+            line-height: 1.8;
+        }
+        .card-content > *:first-child { margin-top: 0; }
+        .card-content > *:last-child { margin-bottom: 0; }
+
+        /* 段落 */
+        .card-content p { margin: 10px 0; }
+
+        /* 加粗文本 */
+        .card-content strong { color: var(--primary); font-weight: 600; }
+
+        /* 列表项 */
+        .card-content ul, .card-content ol { padding-left: 18px; margin: 10px 0; }
+        .card-content li { margin-bottom: 8px; }
+        .card-content li:last-child { margin-bottom: 0; }
+
+        /* 二级列表 */
+        .card-content ul ul { margin: 6px 0 6px 12px; padding-left: 16px; }
+
+        /* 重点高亮 */
+        .highlight {
+            background: linear-gradient(120deg, var(--highlight-bg) 0%, var(--highlight-bg) 100%);
+            padding: 1px 5px;
+            border-radius: 3px;
+            color: var(--highlight-text);
+            font-weight: 500;
+        }
+
+        /* 例题块 */
+        .example-block {
+            background: var(--example-bg);
+            border-left: 4px solid var(--example-border);
+            padding: 12px 16px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .example-q { font-weight: 600; color: var(--example-text); margin-bottom: 8px; }
+        .example-ans {
+            color: #15803d;
+            font-weight: 500;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #bbf7d0;
+        }
+
+        /* 技巧/口诀块 */
+        .tip-block {
+            background: linear-gradient(135deg, var(--tip-bg) 0%, #ddd6fe 100%);
+            border-left: 4px solid var(--tip-border);
+            padding: 10px 14px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+            color: var(--tip-text);
+            font-weight: 500;
+        }
+
+        /* 警示/易错块 */
+        .warning-block {
+            background: var(--warning-bg);
+            border-left: 4px solid var(--warning-border);
+            padding: 10px 14px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+            color: var(--warning-text);
+        }
+
+        /* 知识树结构 */
+        .tree-block {
+            background: #f8fafc;
+            padding: 14px 16px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.9;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        /* ========== 底部水印 ========== */
+        .poster-footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-light);
+            font-size: 13px;
+            background: var(--bg-left);
+            border-top: 1px solid var(--border);
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 900px) {
+            .poster-body { grid-template-columns: 1fr; padding: 20px; }
+            .header-title { font-size: 20px; }
+        }
+    </style>
+</head>
+<body>
+<div class="poster-wrapper">
+
+    <!-- ========== 顶部标题栏 ========== -->
+    <!-- 2025-05-13: 修改meta为data.meta -->
+    <header class="poster-header">
+        <div class="header-main">
+            <div class="header-left">
+                <div class="subject-icon">{{ data.meta.theme.icon }}</div>
+                <div>
+                    <h1 class="header-title">{{ data.meta.poster_title }}</h1>
+                    <p class="header-meta">{{ data.meta.publisher }} · {{ data.meta.grade }} · 第{{ data.meta.unit_name }}单元</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="grade-badge">{{ data.meta.grade }}</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========== 左右分栏主体 ========== -->
+    <!-- 2025-05-13: 修改cards为data.cards -->
+    <div class="poster-body">
+        <!-- 左侧：前3张卡片 -->
+        <div class="column-left">
+            {% for card in data.cards[:3] %}
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-num">{{ loop.index }}</span>
+                    <h2 class="card-title">{{ card.title }}</h2>
+                </div>
+                <div class="card-content">
+                    {{ card.content | safe }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 右侧：后3张卡片 -->
+        <div class="column-right">
+            {% for card in data.cards[3:] %}
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-num">{{ loop.index + 3 }}</span>
+                    <h2 class="card-title">{{ card.title }}</h2>
+                </div>
+                <div class="card-content">
+                    {{ card.content | safe }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ========== 底部水印 ========== -->
+    <!-- 2025-05-13: 修改meta为data.meta -->
+    <footer class="poster-footer">
+        <span>🤖 AI 知识卡生成器 · {{ data.meta.subject }}专属提示词 · {{ data.meta.publisher }}教材同步</span>
+    </footer>
+
+</div>
+
+<!-- 2026-05-14: 海报加载完成后通过 localStorage 通知旧标签页恢复按钮 -->
+<script>
+    (function() {
+        // 使用 localStorage + storage 事件实现同域跨标签页通信
+        // 新标签页写入标记，旧标签页监听 storage 事件自动恢复按钮
+        var key = "poster_ready_" + Date.now();
+        try {
+            localStorage.setItem(key, "1");
+            // 3秒后清理，避免 localStorage 堆积
+            setTimeout(function() {
+                localStorage.removeItem(key);
+            }, 3000);
+        } catch (e) {
+            console.warn("[海报页] localStorage 写入失败:", e);
+        }
+    })();
+</script>
+</body>
+</html>

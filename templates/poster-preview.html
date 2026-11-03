@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>新版UI预览 - 自适应内容布局</title>
+    <style>
+        /* ========== 基础重置 ========== */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans SC', sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.7;
+        }
+
+        /* ========== 统一主题色 ========== */
+        :root {
+            --primary: #4F46E5;
+            --primary-light: #818CF8;
+            --primary-dark: #3730A3;
+            --bg-left: #ffffff;
+            --bg-right: #f8fafc;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --highlight-bg: #fef3c7;
+            --highlight-text: #92400e;
+            --example-bg: #f0fdf4;
+            --example-border: #22c55e;
+            --example-text: #166534;
+            --tip-bg: #eef2ff;
+            --tip-border: var(--primary);
+            --tip-text: var(--primary-dark);
+            --warning-bg: #fef2f2;
+            --warning-border: #ef4444;
+            --warning-text: #991b1b;
+        }
+
+        /* ========== 海报主体 ========== */
+        .poster-wrapper {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: var(--bg-right);
+            min-height: 100vh;
+        }
+
+        /* ========== 顶部标题栏 ========== */
+        .poster-header {
+            padding: 28px 36px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .poster-header::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 300px;
+            height: 300px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+        }
+        .header-main {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            z-index: 1;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .subject-icon {
+            width: 70px;
+            height: 70px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            backdrop-filter: blur(4px);
+        }
+        .header-title {
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            letter-spacing: 1px;
+        }
+        .header-meta {
+            font-size: 15px;
+            opacity: 0.9;
+        }
+        .header-right {
+            text-align: right;
+        }
+        .grade-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 24px;
+            border-radius: 25px;
+            font-size: 20px;
+            font-weight: bold;
+            backdrop-filter: blur(4px);
+        }
+
+        /* ========== 左右分栏布局（弹性高度） ========== */
+        .poster-body {
+            padding: 28px 36px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+
+        .column-left, .column-right {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* ========== 统一卡片样式（高度自适应） ========== */
+        .card {
+            background: var(--bg-left);
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            border: 1px solid var(--border);
+            position: relative;
+            transition: box-shadow 0.2s;
+            overflow: hidden;
+        }
+        .card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+
+        /* 卡片顶部色条 */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary-light) 100%);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 20px 14px;
+            border-bottom: 1px solid var(--border);
+            background: linear-gradient(to bottom, #fafbfc, #fff);
+        }
+        .card-num {
+            width: 28px;
+            height: 28px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .card-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: var(--text);
+            letter-spacing: 0.5px;
+        }
+
+        /* ========== 卡片内容（核心：弹性布局） ========== */
+        .card-content {
+            padding: 16px 20px 20px;
+            font-size: 14px;
+            color: var(--text);
+            line-height: 1.8;
+        }
+        .card-content > *:first-child {
+            margin-top: 0;
+        }
+        .card-content > *:last-child {
+            margin-bottom: 0;
+        }
+
+        /* 段落 */
+        .card-content p {
+            margin: 10px 0;
+        }
+
+        /* 加粗文本 */
+        .card-content strong {
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* 列表项 - 灵活缩进 */
+        .card-content ul, .card-content ol {
+            padding-left: 18px;
+            margin: 10px 0;
+        }
+        .card-content li {
+            margin-bottom: 8px;
+            position: relative;
+        }
+        .card-content li:last-child {
+            margin-bottom: 0;
+        }
+
+        /* 二级列表 */
+        .card-content ul ul {
+            margin: 6px 0 6px 12px;
+            padding-left: 16px;
+        }
+
+        /* 重点高亮 */
+        .highlight {
+            background: linear-gradient(120deg, var(--highlight-bg) 0%, var(--highlight-bg) 100%);
+            padding: 1px 5px;
+            border-radius: 3px;
+            color: var(--highlight-text);
+            font-weight: 500;
+        }
+
+        /* 例题块 - 自适应宽度 */
+        .example-block {
+            background: var(--example-bg);
+            border-left: 4px solid var(--example-border);
+            padding: 12px 16px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .example-q {
+            font-weight: 600;
+            color: var(--example-text);
+            margin-bottom: 8px;
+        }
+        .example-ans {
+            color: #15803d;
+            font-weight: 500;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed #bbf7d0;
+        }
+
+        /* 技巧/口诀块 */
+        .tip-block {
+            background: linear-gradient(135deg, var(--tip-bg) 0%, #ddd6fe 100%);
+            border-left: 4px solid var(--tip-border);
+            padding: 10px 14px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+            color: var(--tip-text);
+            font-weight: 500;
+        }
+
+        /* 警示/易错块 */
+        .warning-block {
+            background: var(--warning-bg);
+            border-left: 4px solid var(--warning-border);
+            padding: 10px 14px;
+            margin: 12px 0;
+            border-radius: 0 8px 8px 0;
+            color: var(--warning-text);
+        }
+
+        /* 知识树结构 */
+        .tree-block {
+            background: #f8fafc;
+            padding: 14px 16px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.9;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        /* ========== 底部水印 ========== */
+        .poster-footer {
+            text-align: center;
+            padding: 24px;
+            color: var(--text-light);
+            font-size: 13px;
+            background: var(--bg-left);
+            border-top: 1px solid var(--border);
+        }
+
+        /* ========== 响应式 ========== */
+        @media (max-width: 900px) {
+            .poster-body {
+                grid-template-columns: 1fr;
+                padding: 20px;
+            }
+            .header-title {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="poster-wrapper">
+
+    <!-- ========== 顶部标题栏 ========== -->
+    <header class="poster-header">
+        <div class="header-main">
+            <div class="header-left">
+                <div class="subject-icon">🔢</div>
+                <div>
+                    <h1 class="header-title">六年级下册 · 数学 · 数学广角</h1>
+                    <p class="header-meta">人教版 · 六年级 · 第数学广角单元</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="grade-badge">六年级</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ========== 左右分栏主体（内容自适应） ========== -->
+    <div class="poster-body">
+        <!-- 左侧：前3张卡片 -->
+        <div class="column-left">
+            
+            <!-- 卡片1 - 核心概念定义 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-num">1</span>
+                    <h2 class="card-title">核心概念定义</h2>
+                </div>
+                <div class="card-content">
+                    <ul>
+                        <li><strong>鸽巢原理（抽屉原理）</strong>：把多于n个物体放到n个抽屉里，则至少有一个抽屉里的物体不少于<span class="highlight">2个</span>。</li>
+                        <li><strong>核心要素</strong>：物体数、抽屉数、至少数</li>
+                        <li><strong>基本表达</strong>：如果有n+1个元素放进n个集合，那么至少有一个集合里含有两个或两个以上的元素。</li>
+                        <li><strong>适用场景</strong>：分配问题、存在性证明、生活预测、游戏策略等。</li>
+                    </ul>
+                    <p>鸽巢原理看似简单，却是解决很多复杂问题的起点。它告诉我们，在某些看似随机的情况下，必然存在某种规律或重复。</p>
+                    <div class="tip-block">
+                        记住口诀：物体抽屉要分清，平均分后看余零，至少要加一，答案自然明
+                    </div>
+                </div>
+            </div>
+
+            <!-- 卡片2 - 核心知识点汇总 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-num">2</span>
+                    <h2 class="card-title">核心知识点汇总</h2>
+                </div>
+                <div class="card-content">
+                    <ul>
+                        <li><strong>基本形式</strong>：物体数 = 抽屉数 + 1，至少数 = 2
+                            <ul>
+                                <li>解释：每抽屉先放1个，再多1个物体必产生"至少2"</li>
+                            </ul>
+                        </li>
+                        <li><strong>推广形式</strong>：物体数 ÷ 抽屉数 = 商...余数，至少数 = 商 + 1
+                            <ul>
+                                <li>公式：至少数 = ⌊物体数/抽屉数⌋ + 1</li>
+                                <li>特殊情况：余数为0时，商 = 至少数（不加1）</li>
+                            </ul>
+                        </li>
+                        <li><strong>逆向应用</strong>：已知物体数、至少数，求抽屉数
+                            <ul>
+                                <li>思路：保证"至少"的最小值，即最不利情况</li>
+                            </ul>
+                        </li>
+                        <li><strong>最不利原则</strong>：考虑最不利情况，然后加1</li>
+                    </ul>
+                    <div class="example-block">
+                        <div class="example-q">📝 把25本书放进4个书架，每个书架至少放几本？</div>
+                        <div style="color:#555;margin-top:6px">分析：25÷4=6……1</div>
+                        <div class="example-ans">每个书架至少放 6+1=7 本书</div>
+                    </div>
+                    <div class="example-block">
+                        <div class="example-q">📝 某班有45人，至少有多少人在同一月出生？</div>
+                        <div style="color:#555;margin-top:6px">分析：45÷12=3……9</div>
+                        <div class="example-ans">至少有 3+1=4 人在同月出生</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 卡片3 - 单元重点梳理 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-num">3</span>
+                    <h2 class="card-title">单元重点梳理</h2>
+                </div>
+                <div class="card-content">
+                    <ul>
+                        <li>理解鸽巢原理的<strong>基本含义</strong>和数学表达</li>
+                        <li>掌握"<strong>至少数 = 商 + 1</strong>"的核心计算公式</li>
+                        <li>能正确识别和区分<strong>物体</strong>和<strong>抽屉</strong></li>
+                        <li>学会用<strong>枚举法</strong>验证简单情况下的结论</li>
+                        <li>理解<strong>最不利原则</strong>的思想方法</li>
+                        <li>能够将原理应用于<strong>实际问题</strong>的分析</li>
+                    </ul>
+                    <p><strong>学习目标</strong>：通过本单元学习，培养学生的逻辑推理能力和抽象思维能力，学会用数学的眼光看待生活中的"必然"现象。</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧：后3张卡片 -->
+        <div class="column-right">
+            
+            <!-- 卡片4 - 单元难点突破 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-num">4</span>
+                    <h2 class="card-title">单元难点突破</h2>
+                </div>
+                <div class="card-content">
+                    <ul>
+                        <li>理解"<strong>至少</strong>"的含义，即在所有可能的分配中，保证最小的那个抽屉里物体的最小数量</li>
+                        <li>当余数为<span class="highlight">0</span>时，至少数等于商（<strong>不再加1</strong>）
+                            <ul>
+                                <li>例如：12本书放4个抽屉，12÷4=3，至少每个抽屉3本</li>
+                            </ul>
+                        </li>
+                        <li>逆向应用时正确列式：已知物体数和至少数，反推抽屉数范围</li>
+                        <li>识别哪些问题适合用鸽巢原理解决</li>
+                    </ul>
+                    <div class="warning-block">
+                        ⚠️ 易错提醒：余数为0时不要再加1！这是最容易犯的错误！
+                    </div>
+                    <div class="example-block">
+                        <div class="example-q">📝 辨析：把8本书放进3个抽屉，至少有一个抽屉有几本书？</div>
+                        <div style="color:#555;margin-top:6px">错误答案：8÷3=2……2，至少2+1=3本 ❌</div>
+                        <div style="color:#555">正确答案：8÷3=2……2，至少2+1=3本，但"至少"是保证每个抽屉都有书，所以是2本以上，即至少2本 ✓</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 卡片5 - 知识结构树 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-num">5</span>
+                    <h2 class="card-title">知识结构树</h2>
+                </div>
+                <div class="card-content">
+                    <div class="tree-block"><strong style="color:var(--primary)">数学广角——鸽巢原理</strong>
+
+├── <strong>一、基本概念</strong>
+│   ├── 物体：被分配的对象
+│   ├── 抽屉：分配的容器/类别
+│   └── 至少数：保证的最小数量
+│
+├── <strong>二、原理形式</strong>
+│   ├── 基本形式：n+1个物体→n个抽屉，至少2个/抽屉
+│   └── 推广形式：物体÷抽屉=商...余，至少=商+1
+│
+├── <strong>三、解题方法</strong>
+│   ├── 正向应用：求至少数
+│   │   └── 步骤：找物体→找抽屉→列算式
+│   └── 逆向应用：求抽屉数
+│       └── 步骤：找物体→确定至少数→反推抽屉
+│
+└── <strong>四、思想应用</strong>
+    ├── 最不利原则
+    ├── 存在性证明
+    └── 优化策略分析</div>
+                </div>
+            </div>
+
+            <!-- 卡片6 - 生活应用与奥数培优 -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-num">6</span>
+                    <h2 class="card-title">生活应用与奥数培优</h2>
+                </div>
+                <div class="card-content">
+                    <ul>
+                        <li><strong>生日问题</strong>：367人必有2人生日相同（366个抽屉+1人）</li>
+                        <li><strong>扑克牌问题</strong>：54张牌，至少抽几张必有2张花色相同？（先抽王牌，再抽13张同花色，共14张）</li>
+                        <li><strong>分配问题</strong>：10个苹果分给9人，至少1人得2个</li>
+                        <li><strong>握手问题</strong>：n个人中至少有2人握手次数相同（n+1人握0~n次）</li>
+                        <li><strong>摸球问题</strong>：袋中有红、黄、白球各若干，至少摸出几个球才能保证有2个同色？</li>
+                    </ul>
+                    <div class="tip-block">
+                        奥数技巧：先考虑最不利情况，再加1得到保证！这是解决复杂鸽巢问题的万能钥匙。
+                    </div>
+                    <div class="example-block">
+                        <div class="example-q">📝 竞赛思维题：从1~50中至少选几个数，才能保证有2个数相差10？</div>
+                        <div style="color:#555;margin-top:6px">思路：构造10组{1,11,21,31,41}，{2,12,22,32,42}，...，{10,20,30,40,50}</div>
+                        <div class="example-ans">每组选1个→10个，再选1个必差10，共11个</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== 底部水印 ========== -->
+    <footer class="poster-footer">
+        <span>🤖 AI 知识卡生成器 · 数学专属提示词 · 人教版教材同步</span>
+    </footer>
+
+</div>
+</body>
+</html>

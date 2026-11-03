@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="初中单词 3000 与分类默写交互原型" />
+  <title>词练 · 初中单词 3000 交互原型</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主导航">
+      <a class="brand" href="#" data-view="dashboard" aria-label="返回学习首页">
+        <span class="brand-mark">KL</span>
+        <span class="brand-copy">
+          <strong>词练</strong>
+          <small>JUNIOR 3000</small>
+        </span>
+      </a>
+
+      <nav class="primary-nav">
+        <button class="nav-item active" data-view="dashboard">
+          <span class="nav-index">01</span><span>学习首页</span>
+        </button>
+        <button class="nav-item" data-view="words">
+          <span class="nav-index">02</span><span>单词库</span>
+        </button>
+        <button class="nav-item" data-view="config">
+          <span class="nav-index">03</span><span>分类默写</span>
+        </button>
+        <button class="nav-item" data-view="wrong">
+          <span class="nav-index">04</span><span>错词复习</span>
+          <span class="nav-badge" id="wrongNavBadge">3</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-secondary">
+        <button class="nav-item" data-view="import">
+          <span class="nav-index">05</span><span>词库导入</span>
+        </button>
+        <button class="nav-item" data-view="settings">
+          <span class="nav-index">06</span><span>设置</span>
+        </button>
+        <a class="nav-item old-link" href="http://127.0.0.1:5000/" target="_blank" rel="noopener">
+          <span class="nav-index">↗</span><span>旧版知识卡</span>
+        </a>
+      </div>
+
+      <div class="sidebar-foot">
+        <p>当前词库</p>
+        <strong>初中 3000 · 人教版</strong>
+        <span>v0.3 · 示例数据</span>
+      </div>
+    </aside>
+
+    <main class="main-area">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow" id="pageEyebrow">LEARNING DESK</p>
+          <h1 id="pageTitle">学习首页</h1>
+        </div>
+        <div class="top-actions">
+          <span class="prototype-tag">交互原型 · Mock 数据</span>
+          <button class="icon-btn" id="helpBtn" aria-label="查看演示说明">?</button>
+          <button class="primary-btn compact" data-view="config">开始默写</button>
+        </div>
+      </header>
+
+      <!-- 学习首页 -->
+      <section class="view active" id="view-dashboard" aria-labelledby="pageTitle">
+        <div class="hero reveal">
+          <div class="hero-copy">
+            <p class="overline">人教版 · 七年级上册</p>
+            <h2>今天，先把会写的<br><em>练到不会忘。</em></h2>
+            <p class="hero-desc">认词、拼写、听写分开记录。每次 20 词，先写，再看答案。</p>
+            <div class="hero-actions">
+              <button class="primary-btn" data-go="config">开始 20 词默写</button>
+              <button class="secondary-btn" data-view="words">浏览词库</button>
+            </div>
+          </div>
+          <div class="hero-visual" aria-hidden="true">
+            <div class="word-orbit">
+              <span class="orbit-label">TODAY'S WORD</span>
+              <strong>environment</strong>
+              <span class="orbit-phonetic">/ɪnˈvaɪrənmənt/</span>
+              <span class="orbit-meaning">n. 环境</span>
+              <button class="sound-dot" id="heroSound" aria-label="播放 environment 发音">
+                <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.5 3a4.5 4.5 0 0 0-2-3.7v7.4a4.5 4.5 0 0 0 2-3.7Z" fill="currentColor"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stat-strip reveal">
+          <div class="stat-cell"><span>待复习</span><strong id="dueCount">12</strong><small>个词</small></div>
+          <div class="stat-cell"><span>本周首答正确</span><strong id="weekAccuracy">76</strong><small>%</small></div>
+          <div class="stat-cell"><span>错词重练通过</span><strong>8</strong><small>/ 10</small></div>
+          <div class="stat-cell"><span>连续学习</span><strong>4</strong><small>天</small></div>
+        </div>
+
+        <div class="dashboard-grid">
+          <section class="panel task-panel reveal">
+            <div class="panel-head">
+              <div><p class="eyebrow">TODAY'S PLAN</p><h3>今日任务</h3></div>
+              <span class="status-pill">约 8 分钟</span>
+            </div>
+            <div class="task-list">
+              <div class="task-row">
+                <span class="task-number">01</span>
+                <div><strong>到期错词复习</strong><p>12 个词 · 听音写词</p></div>
+                <button class="text-btn" data-action="review-due">开始</button>
+              </div>
+              <div class="task-row">
+                <span class="task-number">02</span>
+                <div><strong>Unit 3 单元过关</strong><p>20 个词 · 汉译英</p></div>
+                <button class="text-btn" data-go="config">练习</button>
+              </div>
+              <div class="task-row">
+                <span class="task-number">03</span>
+                <div><strong>音标强化</strong><p>8 个易错词 · 看音标写词</p></div>
+                <button class="text-btn" data-mode-quick="phonetic_to_en">练习</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel continue-panel reveal">
+            <div class="panel-head">
+              <div><p class="eyebrow">RESUME</p><h3>上次练到</h3></div>
+              <span class="status-pill muted">未完成</span>
+            </div>
+            <p class="resume-word">communicate</p>
+            <p class="resume-meaning">v. 交流；沟通</p>
+            <div class="resume-progress"><span style="width: 35%"></span></div>
+            <div class="resume-meta"><span>第 7 / 20 题</span><span>汉译英</span></div>
+            <button class="secondary-btn full" data-action="resume">继续上次练习</button>
+          </section>
+
+          <section class="panel weakness-panel reveal">
+            <div class="panel-head">
+              <div><p class="eyebrow">WEAK SPOTS</p><h3>可以再练的地方</h3></div>
+              <button class="text-btn" data-view="wrong">错词本</button>
+            </div>
+            <div class="weak-list">
+              <div><span class="weak-label">拼写</span><strong>字母顺序</strong><small>environment / necessary</small></div>
+              <div><span class="weak-label">听写</span><strong>同音词混淆</strong><small>write / right</small></div>
+              <div><span class="weak-label">音标</span><strong>重音位置</strong><small>photograph / photographer</small></div>
+            </div>
+            <p class="panel-note">基于最近 3 次练习的错误记录，不用单一分数评价。</p>
+          </section>
+
+          <section class="panel path-panel reveal">
+            <div class="panel-head">
+              <div><p class="eyebrow">DEMO PATH</p><h3>演示路径</h3></div>
+            </div>
+            <ol class="demo-steps">
+              <li><button data-view="words">词库筛选与发音</button></li>
+              <li><button data-view="config">配置汉译英 / 听音写词</button></li>
+              <li><button data-go="practice">作答、提示与判分</button></li>
+              <li><button data-view="result">结果页与错词重练</button></li>
+              <li><button data-view="import">PDF 导入校对</button></li>
+            </ol>
+          </section>
+        </div>
+      </section>
+
+      <!-- 单词库 -->
+      <section class="view" id="view-words">
+        <div class="page-heading">
+          <div>
+            <h2>单词库</h2>
+            <p>先从教材单元选词，再用主题和词性缩小范围。</p>
+          </div>
+          <button class="primary-btn" data-view="config">用当前筛选默写</button>
+        </div>
+
+        <div class="library-toolbar">
+          <label class="search-field">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="m20 20-4.2-4.2m1.7-5.3a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <input id="wordSearch" type="search" placeholder="搜索英文或中文，例如 environment、环境" data-testid="word-search" />
+          </label>
+          <div class="segmented" role="group" aria-label="词库范围">
+            <button class="segmented-btn active" data-filter-unit="all">全部单元</button>
+            <button class="segmented-btn" data-filter-unit="Unit 3">Unit 3</button>
+            <button class="segmented-btn" data-filter-unit="Unit 4">Unit 4</button>
+          </div>
+        </div>
+
+        <div class="library-layout">
+          <aside class="filter-panel" aria-label="筛选条件">
+            <div class="filter-group">
+              <h3>主题</h3>
+              <label><input type="checkbox" value="自然" data-filter-theme /> 自然与环境</label>
+              <label><input type="checkbox" value="成长" data-filter-theme /> 成长与经历</label>
+              <label><input type="checkbox" value="交流" data-filter-theme /> 交流与表达</label>
+            </div>
+            <div class="filter-group">
+              <h3>词性</h3>
+              <label><input type="checkbox" value="n." data-filter-pos /> 名词 n.</label>
+              <label><input type="checkbox" value="v." data-filter-pos /> 动词 v.</label>
+              <label><input type="checkbox" value="adj." data-filter-pos /> 形容词 adj.</label>
+            </div>
+            <div class="filter-group">
+              <h3>学习状态</h3>
+              <label><input type="checkbox" value="待复习" data-filter-status /> 待复习</label>
+              <label><input type="checkbox" value="本轮通过" data-filter-status /> 本轮通过</label>
+            </div>
+            <button class="text-btn" id="clearFilters">清空筛选</button>
+          </aside>
+
+          <div class="word-table-wrap">
+            <div class="table-meta">
+              <span id="wordResultCount">共 10 个词</span>
+              <label class="select-all"><input type="checkbox" id="selectAllWords" /> 全选</label>
+            </div>
+            <div class="word-table" id="wordTable" role="table" aria-label="单词列表"></div>
+            <div class="empty-state hidden" id="wordEmpty">
+              <span class="empty-mark">0</span>
+              <h3>当前筛选没有匹配单词</h3>
+              <p>清空主题、词性或搜索词后再试。</p>
+              <button class="secondary-btn" id="emptyClear">清空筛选</button>
+            </div>
+            <div class="selection-bar hidden" id="selectionBar">
+              <span>已选 <strong id="selectedCount">0</strong> 个词</span>
+              <button class="primary-btn compact" data-view="config">用所选词默写</button>
+              <button class="text-btn" id="clearSelection">清除</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 默写配置 -->
+      <section class="view" id="view-config">
+        <div class="page-heading">
+          <div>
+            <h2>分类默写</h2>
+            <p>选一种能力来验证，不要把认词、拼写和听写混成一个分数。</p>
+          </div>
+          <span class="status-pill subtle">初中 3000 · 人教版</span>
+        </div>
+
+        <div class="config-layout">
+          <div class="config-main">
+            <section class="config-section">
+              <div class="section-title"><span>01</span><div><h3>练习范围</h3><p>当前选择 Unit 3 · 自然与环境</p></div></div>
+              <div class="chip-row">
+                <button class="choice-chip active" data-range="unit3">Unit 3 · 20 词</button>
+                <button class="choice-chip" data-range="theme">自然与环境 · 18 词</button>
+                <button class="choice-chip" data-range="wrong">错词本 · 12 词</button>
+              </div>
+            </section>
+
+            <section class="config-section">
+              <div class="section-title"><span>02</span><div><h3>题型</h3><p id="modeHint">看中文写英文，检测拼写产出。</p></div></div>
+              <div class="mode-grid" id="modeGrid">
+                <label class="mode-card active">
+                  <input type="radio" name="mode" value="zh_to_en" checked />
+                  <span class="mode-top"><strong>汉译英</strong><small>P0</small></span>
+                  <span class="mode-desc">中文释义与词性 → 英文拼写</span>
+                  <span class="mode-skill">拼写</span>
+                </label>
+                <label class="mode-card">
+                  <input type="radio" name="mode" value="audio_to_en" />
+                  <span class="mode-top"><strong>听音写词</strong><small>P0</small></span>
+                  <span class="mode-desc">播放发音 → 英文拼写</span>
+                  <span class="mode-skill">听写</span>
+                </label>
+                <label class="mode-card">
+                  <input type="radio" name="mode" value="en_to_zh" />
+                  <span class="mode-top"><strong>英译汉</strong><small>P1</small></span>
+                  <span class="mode-desc">英文词形 → 中文核心释义</span>
+                  <span class="mode-skill">认词</span>
+                </label>
+                <label class="mode-card">
+                  <input type="radio" name="mode" value="phonetic_to_en" />
+                  <span class="mode-top"><strong>音标写词</strong><small>P1</small></span>
+                  <span class="mode-desc">看音标 → 英文拼写</span>
+                  <span class="mode-skill">音形</span>
+                </label>
+              </div>
+            </section>
+
+            <section class="config-section">
+              <div class="section-title"><span>03</span><div><h3>题量与顺序</h3><p>任务尽量短，先完成，再巩固。</p></div></div>
+              <div class="setting-row">
+                <span>题量</span>
+                <div class="segmented" role="group" aria-label="题量">
+                  <button class="segmented-btn" data-size="10">10</button>
+                  <button class="segmented-btn active" data-size="20">20</button>
+                  <button class="segmented-btn" data-size="30">30</button>
+                </div>
+              </div>
+              <div class="setting-row">
+                <span>顺序</span>
+                <div class="segmented" role="group" aria-label="出题顺序">
+                  <button class="segmented-btn active" data-order="random">随机</button>
+                  <button class="segmented-btn" data-order="sequence">词表顺序</button>
+                </div>
+              </div>
+              <div class="setting-row">
+                <span>首字母提示</span>
+                <label class="switch"><input type="checkbox" id="hintToggle" checked /><span></span></label>
+              </div>
+            </section>
+          </div>
+
+          <aside class="config-summary">
+            <p class="eyebrow">SESSION SUMMARY</p>
+            <h3>本次练习</h3>
+            <div class="summary-main"><strong id="summaryCount">20</strong><span>个词</span></div>
+            <dl>
+              <div><dt>题型</dt><dd id="summaryMode">汉译英</dd></div>
+              <div><dt>范围</dt><dd>Unit 3</dd></div>
+              <div><dt>顺序</dt><dd id="summaryOrder">随机</dd></div>
+              <div><dt>提示</dt><dd id="summaryHint">开启</dd></div>
+              <div><dt>预计</dt><dd>约 6 分钟</dd></div>
+            </dl>
+            <button class="primary-btn full" id="startPracticeBtn" data-testid="start-practice">开始练习</button>
+            <p class="summary-note">答错不会直接显示正确答案；提交后可查看拼写差异。</p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 默写作答 -->
+      <section class="view focus-view" id="view-practice">
+        <div class="practice-shell">
+          <header class="practice-header">
+            <button class="text-btn" id="exitPractice">退出练习</button>
+            <div class="practice-progress-copy">
+              <strong id="practiceCounter">1 / 20</strong>
+              <span id="practiceModeLabel">汉译英</span>
+            </div>
+            <div class="first-score"><span>首答正确</span><strong id="firstScore">0</strong></div>
+          </header>
+          <div class="progress-track"><span id="practiceProgress" style="width: 5%"></span></div>
+
+          <div class="practice-card">
+            <p class="practice-kicker" id="practiceKicker">写出对应的英文单词</p>
+            <div class="prompt-area" id="promptArea"></div>
+
+            <form class="answer-form" id="answerForm" autocomplete="off">
+              <label class="answer-label" for="answerInput">你的答案</label>
+              <div class="answer-row">
+                <input id="answerInput" class="answer-input" type="text" spellcheck="false"
+                       autocapitalize="off" autocomplete="off" data-testid="practice-answer-input"
+                       placeholder="在这里输入英文或中文" aria-describedby="answerHelp" />
+                <button class="primary-btn" id="submitAnswer" type="submit" data-testid="practice-submit">提交答案</button>
+              </div>
+              <p class="answer-help" id="answerHelp">Enter 提交；提交后 Enter 进入下一题。</p>
+            </form>
+
+            <div class="practice-tools" id="practiceTools">
+              <button class="tool-btn" id="replayAudio" type="button">
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Zm12.5 3a4.5 4.5 0 0 0-2-3.7v7.4a4.5 4.5 0 0 0 2-3.7Z" fill="currentColor"/></svg>
+                重听
+              </button>
+              <button class="tool-btn" id="hintBtn" type="button">看首字母</button>
+              <span class="hint-note" id="hintNote"></span>
+            </div>
+
+            <div class="feedback hidden" id="feedback" role="status" aria-live="polite"></div>
+          </div>
+
+          <div class="practice-footer">
+            <span id="practiceHint">提示使用会计入记录，不会直接判错。</span>
+            <button class="primary-btn hidden" id="nextBtn" data-testid="practice-next">下一题 <span>→</span></button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 练习结果 -->
+      <section class="view" id="view-result">
+        <div class="result-head">
+          <h2>这组词，写完了。</h2>
+          <p id="resultSummary">本次练习结果</p>
+        </div>
+        <div class="result-metrics" id="resultMetrics"></div>
+        <div class="result-grid">
+          <section class="panel">
+            <div class="panel-head"><div><p class="eyebrow">REVIEW</p><h3>需要再看一眼</h3></div><span id="wrongCountLabel" class="status-pill danger">3 个</span></div>
+            <div id="resultWrongList" class="result-wrong-list"></div>
+            <div class="empty-state compact hidden" id="resultPerfect">
+              <span class="empty-mark">✓</span><h3>本轮没有错词</h3><p>可以做一次到期复习，或再练一组保持手感。</p>
+            </div>
+          </section>
+          <aside class="result-actions">
+            <h3>下一步</h3>
+            <button class="primary-btn full" id="retryWrongBtn" data-testid="retry-wrong">只练本次错词</button>
+            <button class="secondary-btn full" data-view="config">再练一组</button>
+            <button class="text-btn" data-view="words">回到单词库</button>
+            <p>单次全对只表示“本轮通过”，不等于永久掌握。</p>
+          </aside>
+        </div>
+      </section>
+
+      <!-- 错词本 -->
+      <section class="view" id="view-wrong">
+        <div class="page-heading">
+          <div><h2>错词复习</h2><p>错词不是收藏品，要有下一次可执行的练习。</p></div>
+          <button class="primary-btn" id="retryAllWrong">重练全部错词</button>
+        </div>
+        <div class="wrong-stats">
+          <div><span>待复习</span><strong id="wrongDue">3</strong></div>
+          <div><span>顽固错词</span><strong>2</strong></div>
+          <div><span>本轮已通过</span><strong>4</strong></div>
+        </div>
+        <div class="wrong-list" id="wrongList"></div>
+      </section>
+
+      <!-- 导入 -->
+      <section class="view" id="view-import">
+        <div class="page-heading">
+          <div><h2>词库导入</h2><p>PDF 只生成可校对的草稿；校对、去重后才允许发布。</p></div>
+          <button class="secondary-btn" id="loadSamplePdf">载入示例 PDF</button>
+        </div>
+
+        <div class="import-layout" id="importUploadStage">
+          <label class="drop-zone" for="pdfFile">
+            <input id="pdfFile" type="file" accept=".pdf,.csv,.json" hidden />
+            <span class="drop-mark">PDF</span>
+            <h3>拖入文件，或点击选择</h3>
+            <p>文本型 PDF 可直接解析；扫描件需要 OCR。原型会使用示例数据演示校对流程。</p>
+            <span class="secondary-btn inline">选择文件</span>
+          </label>
+          <aside class="import-rules">
+            <h3>导入前检查</h3>
+            <ol>
+              <li>确认资料有个人使用或再分发权限。</li>
+              <li>单文件建议不超过 20MB、200 页。</li>
+              <li>解析结果必须逐条校对，特别是双栏和音标。</li>
+              <li>重复词不默认覆盖，先处理冲突。</li>
+            </ol>
+          </aside>
+        </div>
+
+        <div class="review-stage hidden" id="importReviewStage">
+          <div class="review-head">
+            <div><p class="eyebrow">PDF DRAFT · 4 / 120</p><h2>校对《七年级词表.pdf》</h2><p>低置信度和缺字段词条已标出。</p></div>
+            <div class="review-actions">
+              <span class="status-pill warn">3 条需处理</span>
+              <button class="primary-btn compact" id="publishDraft">下一步：处理重复</button>
+            </div>
+          </div>
+          <div class="review-grid">
+            <aside class="pdf-preview">
+              <div class="pdf-page">
+                <span class="pdf-page-no">PAGE 03</span>
+                <p class="pdf-line highlight">Unit 3 Our animal friends</p>
+                <p class="pdf-line">environment /ɪnˈvaɪrənmənt/ n. 环境</p>
+                <p class="pdf-line">volunteer /ˌvɒlənˈtɪə(r)/ n. 志愿者</p>
+                <p class="pdf-line">communicate /kəˈmjuːnɪkeɪt/ v. 交流</p>
+                <p class="pdf-line warning-line">enviroment  n. 环境（缺音标）</p>
+                <p class="pdf-line">protect /prəˈtekt/ v. 保护</p>
+              </div>
+              <p class="pdf-caption">原文定位 · 第 3 页</p>
+            </aside>
+            <div class="review-table-wrap">
+              <div class="review-filter">
+                <button class="segmented-btn active">全部</button>
+                <button class="segmented-btn">低置信度</button>
+                <button class="segmented-btn">缺字段</button>
+                <span class="review-count">已确认 1 / 4</span>
+              </div>
+              <div id="reviewRows" class="review-rows"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 设置 -->
+      <section class="view" id="view-settings">
+        <div class="page-heading">
+          <div><h2>学习设置</h2><p>只保留会影响学习体验的选项。</p></div>
+        </div>
+        <div class="settings-grid">
+          <section class="panel">
+            <div class="panel-head"><div><p class="eyebrow">AUDIO</p><h3>发音</h3></div></div>
+            <div class="setting-row"><span>默认口音</span><div class="segmented"><button class="segmented-btn active">英音</button><button class="segmented-btn">美音</button></div></div>
+            <div class="setting-row"><span>设备语音降级</span><label class="switch"><input type="checkbox" checked /><span></span></label></div>
+            <p class="panel-note">没有合法音频时，明确标注设备语音；不冒充真人发音。</p>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div><p class="eyebrow">PRACTICE</p><h3>默写</h3></div></div>
+            <div class="setting-row"><span>默认题量</span><div class="segmented"><button class="segmented-btn">10</button><button class="segmented-btn active">20</button><button class="segmented-btn">30</button></div></div>
+            <div class="setting-row"><span>首字母提示</span><label class="switch"><input type="checkbox" checked /><span></span></label></div>
+            <p class="panel-note">提示后答对会单独记录，不计入无提示首答正确。</p>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><div><p class="eyebrow">SOURCE</p><h3>词源与发音来源</h3></div></div>
+            <p class="source-line">词库：初中 3000 · 人教版（示例）</p>
+            <p class="source-line">音标：open-dict-data / ipa-dict · MIT</p>
+            <p class="source-line">发音：Wikimedia Commons / Piper TTS（按词条记录来源与许可）</p>
+            <button class="secondary-btn" data-view="import">管理导入词库</button>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <nav class="mobile-nav" aria-label="移动端导航">
+    <button class="active" data-view="dashboard"><span>01</span>首页</button>
+    <button data-view="words"><span>02</span>词库</button>
+    <button data-view="config"><span>03</span>默写</button>
+    <button data-view="wrong"><span>04</span>错词</button>
+    <button data-view="import"><span>05</span>导入</button>
+  </nav>
+
+  <aside class="drawer" id="wordDrawer" aria-label="单词详情" aria-hidden="true">
+    <div class="drawer-head">
+      <span class="eyebrow">WORD CARD</span>
+      <button class="icon-btn" id="closeDrawer" aria-label="关闭单词详情">×</button>
+    </div>
+    <div id="drawerContent"></div>
+  </aside>
+  <div class="scrim hidden" id="scrim"></div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <dialog class="help-dialog" id="helpDialog">
+    <div class="dialog-head"><span class="eyebrow">HOW TO EXPLORE</span><button class="icon-btn" id="closeHelp" aria-label="关闭说明">×</button></div>
+    <h2>这是一个可点击的 UI 原型</h2>
+    <p>这里演示的是学习主链路，不是最终 Vue3 生产代码。建议按以下路径操作：</p>
+    <ol>
+      <li>在“单词库”筛选、搜索、打开单词详情。</li>
+      <li>进入“分类默写”，切换汉译英、听音写词、英译汉、音标写词。</li>
+      <li>输入答案、故意写错、使用首字母提示、查看差异并继续。</li>
+      <li>完成后在结果页点击“只练本次错词”。</li>
+      <li>进入“词库导入”，载入示例 PDF，查看校对界面。</li>
+    </ol>
+    <p class="dialog-note">原型使用浏览器语音合成演示发音；生产环境将由后端统一代理合法音频。</p>
+    <button class="primary-btn" id="startTour">从首页开始</button>
+  </dialog>
+
+  <script src="./app.js"></script>
+</body>
+</html>
