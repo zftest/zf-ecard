@@ -51,9 +51,12 @@ node_modules/
 static/spa/
 package-lock.json.bak
 
-# 词库数据（版权文件，不入库）
-data/
+# 运行时数据（数据库、导出的音频等生成物，不入库）
+data/*
 !data/.gitkeep
+# 但 data/seed/ 是「源码」不是生成物：单元骨架与人工录入的词表必须入库，
+# 否则换台机器 clone 下来就没有词库，而它又无法通过任何脚本重新生成。
+!data/seed/
 
 # 音频资产（真人录音/TTS，体积大且有许可约束）
 *.mp3

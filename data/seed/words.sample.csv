@@ -1,0 +1,53 @@
+﻿unit_code,spelling,pos,phonetic_uk,phonetic_us,sense_order,meaning_zh,accepted,theme,example_en,example_zh,source,source_license,verify_status
+SU01,hello,int.,/həˈləʊ/,,1,你好,,日常交际,"Hello, I'm Li Hua.",你好，我是李华。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU01,hi,int.,/haɪ/,,1,嗨,嗨，你好,日常交际,"Hi, everyone!",大家好！,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU01,morning,n.,/ˈmɔːnɪŋ/,,1,早晨,早上,日常交际,"Good morning, Miss Li.",早上好，李老师。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU01,afternoon,n.,/ˌɑːftəˈnuːn/,,1,下午,,日常交际,Good afternoon!,下午好！,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU01,evening,n.,/ˈiːvnɪŋ/,,1,傍晚,晚上|夜晚,日常交际,"Good evening, Dad.",晚上好，爸爸。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU01,name,n.,/neɪm/,,1,名字,姓名,日常交际,My name is Tom.,我的名字叫汤姆。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU01,nice,adj.,/naɪs/,,1,好的,美好的|令人愉快的,日常交际,Nice to meet you.,很高兴见到你。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU01,meet,v.,/miːt/,,1,遇见,认识|见面,日常交际,Nice to meet you.,很高兴认识你。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU01,too,adv.,/tuː/,,1,也,,日常交际,"I'm fine, too.",我也很好。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU01,thanks,int.,/θæŋks/,,1,谢谢,谢谢|感谢,日常交际,Thanks a lot.,非常感谢。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,book,n.,/bʊk/,,1,书,书本,物品,This is my book.,这是我的书。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,pen,n.,/pen/,,1,钢笔,,物品,Is this your pen?,这是你的钢笔吗？,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,pencil,n.,/ˈpensl/,,1,铅笔,,物品,I have a pencil.,我有一支铅笔。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,ruler,n.,/ˈruːlə/,,1,尺子,直尺,物品,Where is my ruler?,我的尺子在哪里？,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,eraser,n.,/ɪˈreɪzə/,,1,橡皮,橡皮擦,物品,The eraser is on the desk.,橡皮在书桌上。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,bag,n.,/bæɡ/,,1,包,书包,物品,My bag is blue.,我的包是蓝色的。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,desk,n.,/desk/,,1,书桌,课桌|桌子,物品,Put it in your desk.,把它放进你的书桌里。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,chair,n.,/tʃeə/,,1,椅子,,物品,"Sit on the chair, please.",请坐在椅子上。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,red,adj.,/red/,,1,红色的,红,颜色,The apple is red.,这个苹果是红色的。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,blue,adj.,/bluː/,,1,蓝色的,蓝,颜色,Her bag is blue.,她的包是蓝色的。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,green,adj.,/ɡriːn/,,1,绿色的,绿,颜色,The tree is green.,这棵树是绿色的。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,yellow,adj.,/ˈjeləʊ/,,1,黄色的,黄,颜色,I like the yellow one.,我喜欢那个黄色的。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,black,adj.,/blæk/,,1,黑色的,黑,颜色,He has a black cat.,他有一只黑猫。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,white,adj.,/waɪt/,,1,白色的,白,颜色,The wall is white.,墙是白色的。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,tidy,adj.,/ˈtaɪdi/,,1,整洁的,整齐的|干净的,物品,Keep your room tidy.,保持你的房间整洁。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU02,keep,v.,/kiːp/,,1,保持,,物品,Keep your desk clean.,保持你的书桌干净。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU03,welcome,v.,/ˈwelkəm/,,1,欢迎,,场所,Welcome to my school!,欢迎来到我的学校！,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU03,come,v.,/kʌm/,,1,来,,场所,Come and see my room.,来看看我的房间。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU03,window,n.,/ˈwɪndəʊ/,,1,窗户,窗,场所,"Open the window, please.",请打开窗户。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU03,door,n.,/dɔː/,,1,门,,场所,"Close the door, please.",请关上门。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU03,wall,n.,/wɔːl/,,1,墙,墙壁,场所,There is a map on the wall.,墙上有一幅地图。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU03,floor,n.,/flɔː/,,1,地板,地上|地面,场所,The bag is on the floor.,包在地板上。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU03,open,v.,/ˈəʊpən/,,1,打开,,场所,Please open your books.,请打开你们的书。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU03,close,v.,/kləʊz/,,1,关闭,关上,场所,Please close the door.,请关门。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U01,friend,n.,/frend/,,1,朋友,好友,人物,She is my good friend.,她是我的好朋友。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U01,class,n.,/klɑːs/,,1,班级,班,学校,I'm in Class Two.,我在二班。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U01,school,n.,/skuːl/,,1,学校,,学校,This is my new school.,这是我的新学校。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U01,teacher,n.,/ˈtiːtʃə/,,1,老师,教师,学校,Mr Li is our English teacher.,李老师是我们的英语老师。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U01,student,n.,/ˈstjuːdnt/,,1,学生,,学校,I am a student.,我是一名学生。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U01,football,n.,/ˈfʊtbɔːl/,,1,足球,足球运动,运动,He likes playing football.,他喜欢踢足球。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U01,music,n.,/ˈmjuːzɪk/,,1,音乐,,艺术,I love music very much.,我非常喜欢音乐。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U01,sport,n.,/spɔːt/,,1,运动,体育运动,运动,Swimming is my favourite sport.,游泳是我最喜欢的运动。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U01,hobby,n.,/ˈhɒbi/,,1,爱好,喜好,兴趣,What's your hobby?,你的爱好是什么？,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U01,Chinese,adj.,/ˌtʃaɪˈniːz/,,1,中文的,汉语的|语文的,学校,We have a Chinese class today.,我们今天有一节语文课。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U02,family,n.,/ˈfæməli/,,1,家庭,家人|家人照片,家庭,This is my family photo.,这是我的全家福。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U02,mother,n.,/ˈmʌðə/,,1,母亲,妈妈,家庭,My mother is a nurse.,我妈妈是一名护士。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U02,father,n.,/ˈfɑːðə/,,1,父亲,爸爸,家庭,His father works in a bank.,他爸爸在银行工作。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U02,sister,n.,/ˈsɪstə/,,1,姐妹,姐姐|妹妹,家庭,I have one sister.,我有一个妹妹。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U02,brother,n.,/ˈbrʌðə/,,1,兄弟,哥哥|弟弟,家庭,My brother is ten.,我弟弟十岁。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U02,grandpa,n.,/ˈɡrænpɑː/,,1,爷爷,祖父|外公|姥爷,家庭,Grandpa likes reading.,爷爷喜欢看书。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+U01,class,n.,/klɑːs/,,2,课,课程,学校,We have four classes today.,我们今天有四节课。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending
+SU03,close,v.,/kləʊz/,,2,近的,靠近的|近,场所,The school is close to my home.,学校离我家很近。,PEP2024-SAMPLE,教材词汇表人工录入（个人学习用）,pending

@@ -118,3 +118,43 @@ def poster_id(client, fake_ai):
     resp = client.post("/api/generate", json=VALID_FORM)
     assert resp.status_code == 200
     return resp.get_json()["poster_id"]
+
+
+# ─────────────────────────────────────────────────────────────
+# 数据层 fixture
+# ─────────────────────────────────────────────────────────────
+
+
+@pytest.fixture()
+def db(tmp_path):
+    """每个测试一个全新的临时 SQLite，跑完即弃。
+
+    这里用 create_all 而不是 alembic：单元测试要快，且不该依赖迁移文件。
+    「迁移脚本与模型是否一致」由 tests/test_migrations.py 单独把关，
+    两者分工明确，不会因为走了 create_all 就漏掉迁移的一致性。
+    """
+    from core.db import Database
+
+    database = Database(str(tmp_path / "test.db"))
+    database.create_all()
+    try:
+        yield database
+    finally:
+        database.dispose()
+
+
+@pytest.fixture()
+def seeded_db(db):
+    """导入 data/seed 下的样例词库，供练习/统计相关测试使用。"""
+    from tools.load_seed import (
+        DEFAULT_UNITS_CSV,
+        DEFAULT_WORDS_CSV,
+        load_units,
+        load_words,
+        read_csv,
+    )
+
+    with db.session() as session:
+        unit_index, _ = load_units(session, read_csv(DEFAULT_UNITS_CSV))
+        load_words(session, read_csv(DEFAULT_WORDS_CSV), unit_index, "上册")
+    return db
