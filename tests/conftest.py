@@ -5,8 +5,11 @@
    绝不污染真实的 output/cache。
 2. DeepSeek 与 Playwright 全部打桩 —— 测试不依赖网络，也不启动浏览器。
 """
+import datetime as dt
 import os
 import sys
+import uuid
+from pathlib import Path
 
 import pytest
 
@@ -17,6 +20,36 @@ if ROOT not in sys.path:
 
 import app as app_module  # noqa: E402
 from services.deepseek_client import get_subject_cards, get_subject_info  # noqa: E402
+
+# 本次测试运行的临时根目录：只建一次，永不自删。
+# 见下方 tmp_path 的说明。
+_TMP_ROOT = Path(ROOT) / "data" / ".pytest-tmp" / (
+    f"run-{dt.datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:6]}"
+)
+
+
+@pytest.fixture()
+def tmp_path(request):
+    """自建临时目录，替代 pytest 内置的 tmp_path。
+
+    为什么不用内置的：
+        内置实现（tmpdir 插件）会在每次运行时清理旧的临时目录（递归删除），
+        并且 `--basetemp` 会在启动时清空整个目录。在受管制的环境里
+        这类批量删除会被安全策略拦截，报错信息还会伪装成"测试失败"，
+        让人误以为是代码问题。
+
+    取舍：
+        代价是这些目录不会自动清理，需要偶尔手动删掉 data/.pytest-tmp。
+        这个目录已在 .gitignore 里，不影响提交。
+    """
+    _TMP_ROOT.mkdir(parents=True, exist_ok=True)
+    # 测试名里可能有 [] : 等 Windows 非法字符（参数化用例），先净化
+    safe = "".join(
+        char if char.isalnum() or char in "-_." else "_" for char in request.node.name
+    )[:60]
+    path = _TMP_ROOT / f"{safe}-{uuid.uuid4().hex[:8]}"
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 # 一张结构完整的最小知识卡。
@@ -158,3 +191,30 @@ def seeded_db(db):
         unit_index, _ = load_units(session, read_csv(DEFAULT_UNITS_CSV))
         load_words(session, read_csv(DEFAULT_WORDS_CSV), unit_index, "上册")
     return db
+
+
+# ─────────────────────────────────────────────────────────────
+# /api/v1 fixture
+# ─────────────────────────────────────────────────────────────
+
+
+@pytest.fixture()
+def api_app(tmp_path, seeded_db):
+    """挂着**已灌种子词库**的临时库的 Flask 实例。
+
+    关键是 DB_PATH 注入：否则 create_app 会连上真实的 data/app.db，
+    测试就可能读到、甚至改坏用户自己的数据。
+    """
+    application = app_module.create_app(
+        {
+            "DB_PATH": seeded_db.path,
+            "CACHE_DIR": str(tmp_path / "cache"),
+            "TESTING": True,
+        }
+    )
+    return application
+
+
+@pytest.fixture()
+def api(api_app):
+    return api_app.test_client()

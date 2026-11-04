@@ -1,10 +1,45 @@
 # zf-ecard `/api/v1` 接口文档
 
-> 版本：v1.0
-> 日期：2026-11-03
+> 版本：v1.1
+> 日期：2026-11-04（v1.1：B3 已实现 7 个接口，并修正三处与数据库不一致的契约）
 > 服务基址（开发）：`http://127.0.0.1:5000`
 > 服务基址（生产）：同 Flask 端口，SPA 挂在 `/app/`
 > 关联文档：`docs/architecture-frontend-backend-separation.md`
+
+---
+
+## 实现状态（2026-11-04，B3 完成）
+
+已实现并通过测试（157 项）：
+
+| 接口 | 状态 |
+|---|---|
+| `GET /api/v1/health` | ✅ |
+| `GET /api/v1/units` | ✅ |
+| `GET /api/v1/themes` | ✅ |
+| `GET /api/v1/words` | ✅ |
+| `GET /api/v1/words/{word_id}` | ✅ |
+| `GET /api/v1/learners/{learner_id}` | ✅ |
+| `GET /api/v1/learners/{learner_id}/stats/overview` | ✅ |
+| `POST /api/v1/practice/sessions` 等（第 7 节起） | ⬜ B4 |
+
+### 三处契约修正（以本文档为准，前端按这里写）
+
+写这份文档时数据库还没建，下面三项与实际实现不一致，现按实现修正 ——
+**这一版之后，以下面的写法为准，正文中原有的旧示例以本节为准。**
+
+| 项 | v1.0 写法 | v1.1 实际 | 原因 |
+|---|---|---|---|
+| `word_id` / `unit_id` / `sense_id` | 字符串 `w_0001` / `u_03` / `s_0001_1` | **整数** | 数据库用自增主键。加前缀需要一层解析，参数格式错时会把 400/404 搅混；而且上下册都有 `U01`，字符串 `u_03` 本身也区分不了册别 |
+| `learner_id` | `lrn_default` | **`default`** | 直接等于 `skill_progress.learner_key`，省掉一层映射。拼错（如 `typo`）返回 404，**不会**静默兜底成默认学习者 |
+| `skill` 取值 | `zh_to_en` 等 | API 仍收/返**题型名**，数据库存**技能名** | 题型是「这次怎么练」，技能是「练的哪种能力」，将来一个技能可由多个题型练。换算只发生在服务端 `core/vocabulary.py` |
+
+补充两条实现细节：
+
+- `GET /units` 的每一项额外返回 `unit_code`、`unit_no`、`is_starter`、`term`、`book_id`，
+  便于前端区分「上册 U01」和「下册 U01」。
+- `GET /learners/{id}` 的 `created_at` 取该学习者**最早一次作答时间**；
+  从未练习过则为 `null`（MVP 没有 learners 表，不编造"注册时间"）。
 
 ---
 

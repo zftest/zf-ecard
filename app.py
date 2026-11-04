@@ -487,9 +487,16 @@ def create_app(config_object=None):
     # 旧版页面与接口（保持不变）
     register_legacy_routes(app)
 
-    # ── 新增功能蓝图在此接入（下一批次）─────────────────────────
-    # from api.v1 import bp as api_v1_bp
-    # app.register_blueprint(api_v1_bp)
+    # ── 数据库 ────────────────────────────────────────────────
+    # DB_PATH 可由 config_object 注入，测试用临时库，绝不碰 data/app.db
+    from core import db as core_db
+
+    core_db.init_app(app)
+
+    # ── 新增功能：/api/v1 前后端分离接口 ────────────────────────
+    from api.v1 import register_api_v1
+
+    register_api_v1(app)
 
     return app
 

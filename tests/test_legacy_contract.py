@@ -223,12 +223,31 @@ def test_endpoint_names_unchanged(app):
 
 
 def test_route_count_is_seven(app):
-    """旧路由数量固定为 7。新增功能必须走 /api/v1，不得往这里塞。"""
+    """旧路由数量固定为 7。新增功能必须走 /api/v1，不得往这里塞。
+
+    /api/v1 的路由被显式排除，否则每加一个新接口这条断言就会红一次，
+    最后一定会被人改成「== 14」「== 21」而失去意义。
+    这里要守的是**旧接口不增不减**，不是"全站路由总数"。
+    """
     legacy = [
-        rule for rule in app.url_map.iter_rules()
+        rule
+        for rule in app.url_map.iter_rules()
         if not rule.rule.startswith("/static")
+        and not rule.rule.startswith("/api/v1")
     ]
     assert len(legacy) == 7, [r.rule for r in legacy]
+
+
+def test_api_v1_routes_are_namespaced(app):
+    """新接口一律挂在 /api/v1 下，不许占用旧路由的命名空间。"""
+    api_rules = [
+        rule.rule for rule in app.url_map.iter_rules() if "/api/" in rule.rule
+    ]
+    new_api = [rule for rule in api_rules if rule.startswith("/api/v1")]
+    legacy_api = [rule for rule in api_rules if not rule.startswith("/api/v1")]
+    assert new_api, "应至少有一个 /api/v1 接口"
+    # 旧 JSON 接口只有这两个，逐个写出来而不是数数量，谁多加了会立刻暴露
+    assert sorted(legacy_api) == ["/api/export/<poster_id>", "/api/generate"]
 
 
 # ══════════════════════════════════════════════════════════════
