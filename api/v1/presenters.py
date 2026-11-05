@@ -11,16 +11,16 @@
 from __future__ import annotations
 
 import datetime as dt
-import os
 
-from core.models import SkillProgress, Word
+from core.audio import audio_flags
+from core.grading import make_hint
+from core.models import PracticeItem, PracticeSession, SkillProgress, Word
+from core.practice import expires_at, session_progress, session_state
 from core.queries import LOCAL_TZ
 from core.vocabulary import derive_status, skill_to_mode
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-AUDIO_DIR = os.path.join(BASE_DIR, "data", "audio")
-# 音频扩展名：MVP 统一 mp3（见 docs/word-source-and-pronunciation-plan.md）
-AUDIO_EXT = "mp3"
+# 需要孩子写英文的题型：只有这几种才给"首字母 + 下划线"的提示
+EN_OUTPUT_MODES = ("zh_to_en", "audio_to_en", "phonetic_to_en")
 
 
 def iso(value: dt.datetime | None) -> str | None:
@@ -30,20 +30,6 @@ def iso(value: dt.datetime | None) -> str | None:
     if value.tzinfo is None:
         value = value.replace(tzinfo=dt.timezone.utc)
     return value.astimezone(LOCAL_TZ).isoformat(timespec="seconds")
-
-
-def _audio_flags(word_id: int) -> dict[str, bool]:
-    """音频是否已就绪。
-
-    直接看文件在不在，而不是写一个全局开关 ——
-    这样 B5 把音频灌进 data/audio 之后，接口会自动开始返回 true，
-    不需要再回来改一行"记得把 false 改成 true"的代码。
-    """
-    base = os.path.join(AUDIO_DIR, str(word_id))
-    return {
-        accent: os.path.exists(os.path.join(base, f"{accent}.{AUDIO_EXT}"))
-        for accent in ("uk", "us")
-    }
 
 
 def present_pagination(page: int, page_size: int, total: int) -> dict:
@@ -97,7 +83,7 @@ def present_word_brief(word: Word, progresses: list[SkillProgress]) -> dict:
         "theme": word.theme,
         "meaning_cn": primary_sense.meaning_zh if primary_sense else None,
         "sense_count": len(word.senses),
-        "audio": _audio_flags(word.id),
+        "audio": audio_flags(word.id),
         "progress": present_progress(progress) if progress else None,
     }
 
@@ -132,6 +118,143 @@ def present_word_detail(word: Word, progresses: list[SkillProgress]) -> dict:
             }
             for sense in word.senses
         ],
-        "audio": _audio_flags(word.id),
+        "audio": audio_flags(word.id),
         "progress_by_skill": by_skill,
     }
+
+
+# ─────────────────────────────────────────────────────────────
+# 练习会话与判题
+# ─────────────────────────────────────────────────────────────
+
+
+def present_item(item: PracticeItem, words: dict[int, Word], hint_enabled: bool) -> dict:
+    """一道题的对外结构。
+
+    `prompt` 与 `phonetic` 是**互斥**的：听音题/音标题不能带词形，
+    否则打开 devtools 就能看到答案。这不是防作弊，是防止"手滑把答案渲染出来"。
+    """
+    word = words.get(item.word_id)
+    prompt: str | None = None
+    phonetic: str | None = None
+    available = False
+
+    if item.mode in ("zh_to_en", "en_to_zh"):
+        prompt = item.prompt_snapshot
+    elif item.mode == "phonetic_to_en":
+        phonetic = (word.phonetic_uk or word.phonetic_us) if word else None
+    elif item.mode == "audio_to_en":
+        available = audio_flags(item.word_id)["uk"] or audio_flags(item.word_id)["us"]
+
+    hint = None
+    if hint_enabled and item.mode in EN_OUTPUT_MODES:
+        hint = make_hint(item.expected_snapshot)
+
+    payload = {
+        "item_id": item.id,
+        "index": item.seq,
+        "word_id": item.word_id,
+        "sense_id": item.sense_id,
+        "prompt": prompt,
+        "phonetic": phonetic,
+        "audio_available": available,
+        "hint": hint,
+        "answered": item.answered_at is not None,
+    }
+
+    # 只有英译汉可以回传词形 —— 它的题干本来就是词形。
+    # 汉译英/听音写词/音标写词一旦带上 form，等于把答案直接放进响应里。
+    if item.mode == "en_to_zh":
+        payload["form"] = word.spelling if word else None
+    return payload
+
+
+def present_session(
+    session_row: PracticeSession,
+    items: list[PracticeItem],
+    words: dict[int, Word],
+    *,
+    warnings: list[dict] | None = None,
+    include_answers: bool = False,
+) -> dict:
+    """会话主体。`status` 用现算的三态，不是库里的两态。"""
+    payload = {
+        "session_id": session_row.id,
+        "learner_id": session_row.learner_key,
+        "mode": session_row.mode,
+        "range": session_row.range_type,
+        "range_value": session_row.range_value,
+        "order": session_row.order_strategy,
+        "hint_enabled": session_row.hint_enabled,
+        "size": session_row.size,
+        "status": session_state(session_row),
+        "started_at": iso(session_row.started_at),
+        "created_at": iso(session_row.started_at),
+        "expires_at": iso(expires_at(session_row)),
+        "progress": session_progress(session_row),
+        "items": [
+            present_item(item, words, session_row.hint_enabled) for item in items
+        ],
+    }
+    if include_answers:
+        payload["answers"] = [
+            {
+                "item_id": item.id,
+                "user_answer": item.user_answer,
+                "expected": item.expected_snapshot,
+                "correct": item.is_correct,
+                "first_try_correct": item.first_try_correct,
+                "hint_used": item.hint_used,
+                "answered_at": iso(item.answered_at),
+            }
+            for item in items
+            if item.answered_at is not None
+        ]
+    if warnings:
+        payload["warnings"] = warnings
+    return payload
+
+
+def present_grade(item: PracticeItem, payload: dict) -> dict:
+    """判题响应。字段顺序与文档一致，前端可照抄。"""
+    result = payload["result"]
+    return {
+        "item_id": item.id,
+        "correct": result.correct,
+        "near_miss": result.near_miss,
+        "distance": result.distance,
+        "expected": result.expected,
+        "normalized_input": result.normalized_input,
+        "diff": result.diff,
+        "hint_used": item.hint_used,
+        "first_try_correct": bool(item.first_try_correct),
+        "feedback": result.feedback,
+        "progress_updated": _present_progress_updated(payload["progress_updated"]),
+        "session_progress": payload["session_progress"],
+        "answered_at": iso(item.answered_at),
+    }
+
+
+def _present_progress_updated(updated: dict | None) -> dict | None:
+    if updated is None:
+        # 重复提交同一题：不再动盒子和错词计数，但要让前端知道"没白提交"
+        return None
+    return {
+        "skill": updated["skill"],
+        "box_before": updated["box_before"],
+        "box_after": updated["box_after"],
+        "next_review_at": iso(updated["next_review_at"]),
+        "reason": updated["reason"],
+    }
+
+
+def present_finish(summary: dict) -> dict:
+    """结果页数据。时间字段统一转 ISO。"""
+    payload = dict(summary)
+    payload["next_review_at"] = iso(summary.get("next_review_at"))
+    payload["wrong_items"] = [
+        {**item, "next_review_at": iso(item.get("next_review_at"))}
+        for item in summary.get("wrong_items", [])
+    ]
+    return payload
+

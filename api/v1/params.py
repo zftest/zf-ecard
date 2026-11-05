@@ -17,7 +17,7 @@ from typing import Any, Mapping, Literal
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from api.v1.errors import ValidationFailed
-from core.vocabulary import MODES, SORTS, STATUSES
+from core.vocabulary import MODES, ORDERS, RANGE_TYPES, SORTS, STATUSES
 
 
 def _humanize(error: dict[str, Any]) -> dict[str, str]:
@@ -53,6 +53,31 @@ def parse_query(model_cls: type[BaseModel], args: Mapping[str, str]):
         return model_cls.model_validate(raw)
     except ValidationError as exc:
         raise ValidationFailed(details=[_humanize(err) for err in exc.errors()]) from None
+
+
+def parse_body(model_cls: type[BaseModel], payload: Any):
+    """把 JSON 请求体解析成校验过的模型。
+
+    单独一个入口的原因：`request.get_json()` 在 body 不是合法 JSON 时
+    会抛 400 的框架异常，在 body 为空时返回 None。
+    两种情况的报错形态不一样，前端要写两个分支才能判断"我到底哪里错了"。
+    这里统一成 `VALIDATION_ERROR` + 明确文案。
+    """
+    if payload is None:
+        raise ValidationFailed(
+            message="请求体必须是 JSON 对象",
+            details=[{"field": "(请求体)", "message": "缺少 JSON body 或 Content-Type 不是 application/json"}],
+        )
+    if not isinstance(payload, dict):
+        raise ValidationFailed(
+            message="请求体必须是 JSON 对象",
+            details=[{"field": "(请求体)", "message": "顶层必须是对象 {}, 不是数组或字符串"}],
+        )
+    try:
+        return model_cls.model_validate(payload)
+    except ValidationError as exc:
+        raise ValidationFailed(details=[_humanize(err) for err in exc.errors()]) from None
+
 
 
 class _Base(BaseModel):
@@ -130,3 +155,45 @@ class StatsQuery(_Base):
         if value not in (7, 14, 30):
             raise ValueError("只允许 7、14 或 30")
         return value
+
+
+# ─────────────────────────────────────────────────────────────
+# 请求体（POST）
+# ─────────────────────────────────────────────────────────────
+
+
+class CreateSessionBody(_Base):
+    """创建练习会话。
+
+    `range` 是 Python 内置函数名，但在 pydantic 模型里作为字段名没问题，
+    JSON 里的 key 就叫 `range`（契约文档这么写，前端不用迁就 Python）。
+    """
+
+    learner_id: str = Field("default", max_length=32)
+    range: Literal[*RANGE_TYPES]
+    range_value: str | None = Field(None, max_length=64)
+    mode: Literal[*MODES]
+    size: int = Field(20, ge=5, le=50, description="题量，5-50")
+    order: Literal[*ORDERS] = "random"
+    hint_enabled: bool = True
+
+
+class SubmitAnswerBody(_Base):
+    """提交一道题的作答。
+
+    `answer` 允许空串：孩子直接点"不会"也是合法作答，
+    判错即可，不该返 400 —— 那会让前端弹"请求失败"，把业务结果当成故障。
+    """
+
+    item_id: int = Field(..., ge=1)
+    answer: str = Field("", max_length=100)
+    hint_used: bool = False
+    replay_count: int = Field(0, ge=0, le=20)
+    elapsed_ms: int = Field(0, ge=0, le=600000)
+
+
+class SessionQuery(_Base):
+    """查询会话。`include_answers` 只在结果页开，作答中不要开。"""
+
+    include_answers: bool = False
+

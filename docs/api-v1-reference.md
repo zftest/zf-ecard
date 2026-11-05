@@ -1,16 +1,16 @@
 # zf-ecard `/api/v1` 接口文档
 
-> 版本：v1.1
-> 日期：2026-11-04（v1.1：B3 已实现 7 个接口，并修正三处与数据库不一致的契约）
+> 版本：v1.2
+> 日期：2026-11-05（v1.2：B4 完成「练习与判题」4 个接口，补第 7.5 节判题口径）
 > 服务基址（开发）：`http://127.0.0.1:5000`
 > 服务基址（生产）：同 Flask 端口，SPA 挂在 `/app/`
 > 关联文档：`docs/architecture-frontend-backend-separation.md`
 
 ---
 
-## 实现状态（2026-11-04，B3 完成）
+## 实现状态（2026-11-05，B4 完成）
 
-已实现并通过测试（157 项）：
+已实现并通过测试（227 项，其中判题/抽题单测 47 项、练习接口 23 项）：
 
 | 接口 | 状态 |
 |---|---|
@@ -21,7 +21,12 @@
 | `GET /api/v1/words/{word_id}` | ✅ |
 | `GET /api/v1/learners/{learner_id}` | ✅ |
 | `GET /api/v1/learners/{learner_id}/stats/overview` | ✅ |
-| `POST /api/v1/practice/sessions` 等（第 7 节起） | ⬜ B4 |
+| `POST /api/v1/practice/sessions` | ✅ |
+| `GET /api/v1/practice/sessions/{session_id}` | ✅ |
+| `POST /api/v1/practice/sessions/{session_id}/answers` | ✅ |
+| `POST /api/v1/practice/sessions/{session_id}/finish` | ✅ |
+| `GET /api/v1/learners/{learner_id}/wrongbook`（第 8 节） | ⬜ B5 |
+| `GET /api/v1/audio/{word_id}`（第 9 节） | ⬜ B6 |
 
 ### 三处契约修正（以本文档为准，前端按这里写）
 
@@ -1123,6 +1128,84 @@ curl -X POST http://127.0.0.1:5000/api/v1/practice/sessions/ps_9f2c1a7b/finish \
 **幂等性**：重复调用返回同样结果，不会重复写错词本。
 
 **失败返回** `404` / `409 SESSION_EXPIRED`
+
+---
+
+### 7.5 判题口径（v1.2 实现细节，前后端以此为准）
+
+这一节不是"补充说明"，是**契约的一部分**。判题写错不会报错，只会静默判错，
+所以每条口径都配了单测（`tests/test_grading.py`、`tests/test_practice_api.py`）。
+
+#### 归一化：折叠什么，不折叠什么
+
+| 输入 | 处理 | 例子 |
+|---|---|---|
+| 大小写 | 折叠 | `Hello` == `hello` |
+| 全角字符 | NFKC 转半角 | `ｅｎｖ` == `env` |
+| 弯引号 | 统一为 `'` | `don’t` == `don't` |
+| 连字符变体 | 统一为 `-` | `ice – cream` == `ice-cream` |
+| 连续空白 / 首尾空白 | 折叠/去掉 | `hello    world` == `hello world` |
+| 首尾标点（中英） | 去掉 | `apple.` == `apple`、`环境，` == `环境` |
+| **空格与连字符之间** | **不折叠** | `ice cream` ≠ `ice-cream` |
+| **同义/近义改写** | **不推断** | 只认 `accepted` 里人工维护的写法 |
+
+> 「经历」和「经验」算不算同一个答案，只有家长能拍板。靠编辑距离猜，
+> 等于把整本词库的判题口径交给运气。
+
+#### 四条容易被写错的规则
+
+| 规则 | 实现 | 为什么 |
+|---|---|---|
+| `first_try_correct` | `correct && !hint_used`，**只在第一次提交时确定** | 它要表达"第一遍独立答对"。允许被重试改写，首答正确率就退化成最终正确率 |
+| `near_miss` | 编辑距离 ≤ 1 **且** 答案长度 ≥ 6 **且** 英文题 | `cat`/`cut` 只差一个字母就是另一个词，提示"很接近"是误导 |
+| `diff[].pos` | **渲染顺序索引**（从 0 连续递增），不是原串下标 | 前端按数组顺序逐格画即可，不用自己算插入点 |
+| `diff[].status` | `ok` / `missing`（漏写，char 为应写的字符）/ `extra`（多写，char 为多出的字符）/ `wrong`（写错，char 为应写字符，另附 `input` 为实际输入） | 漏写画占位方块、多写画红色删除线、写错两者都显示 |
+
+#### 重复提交同一题
+
+| 会变 | 不会变 |
+|---|---|
+| `user_answer`、`normalized_answer`、`is_correct`、`attempts`、`answered_at` | 盒子等级、`correct_count` / `wrong_count`、`first_try_correct` |
+
+重复提交时 `progress_updated` 返回 **`null`**（表示"本次没有产生进度变更"），
+`session_progress.answered` 也不会增加。否则孩子反复试到对为止，
+盒子会被刷到第 5 盒，错词本永远是空的。
+
+#### 题池口径：一个**义项**是一道题
+
+- `class` 的「班级」「课堂」是两道题（错词本必须分开记账）
+- 因此 **题数可能大于单元列表里的词数**，这是设计如此
+- `range=en_to_zh` 例外：题干是词形，按词合并，判题接受该词的**任意**义项
+
+#### 会话状态
+
+| 状态 | 条件 | 提交答案 / 结束 |
+|---|---|---|
+| `running` | 未结束且未超 2 小时 | 正常 |
+| `finished` | `status='finished'` | 409 `SESSION_FINISHED` |
+| `expired` | `started_at + 2h < now` | 409 `SESSION_EXPIRED` |
+
+判断顺序是**先 finished 再 expired**：已结束的会话放两小时后不该变成"过期"，
+否则结果页刷新一次就提示"请重新开始"，而成绩明明还在。
+
+#### `warnings` 的两种取值
+
+| code | 触发 | 前端处理 |
+|---|---|---|
+| `POOL_INSUFFICIENT` | 请求题量 > 池子大小 | 正常出题，提示"本范围只有 N 道题" |
+| `AUDIO_UNAVAILABLE` | `mode=audio_to_en` 且 `data/audio` 下无文件 | 切设备语音并标注"非真人"，**不要弹错** |
+
+#### `finish` 里的两个字段口径
+
+| 字段 | 口径 |
+|---|---|
+| `wrongbook_added` | 本次**新进**错词本的词数 = 该词在该技能下累计 `wrong_count == 1`。错词本是 `skill_progress` 的视图，没有单独的表，只能由累计次数反推 |
+| `next_review_at` | 本次错题里最早的复习时间；全对时为 `null` |
+
+#### ID 类型
+
+`session_id` / `item_id` / `word_id` / `sense_id` **全部是整数**，
+与 v1.1 的修正一致（正文示例里的 `ps_9f2c1a7b`、`pi_001` 是早期设计稿写法，以实现为准）。
 
 ---
 

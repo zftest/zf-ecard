@@ -27,7 +27,7 @@ DEFAULT_SETTINGS = {
 }
 
 
-def _ensure_learner(learner_id: str) -> None:
+def ensure_learner(learner_id: str) -> None:
     """MVP 只有一个学习者。其他 ID 一律 404，而不是静默当成 default。
 
     静默兜底会让前端拼错 ID 时也能"正常工作"，等到真要支持多用户那天，
@@ -41,7 +41,7 @@ def _ensure_learner(learner_id: str) -> None:
 def get_learner(learner_id: str):
     """学习者档案 + 今日概览 + 累计分布，驱动首页。"""
     parse_query(LearnerQuery, request.args)
-    _ensure_learner(learner_id)
+    ensure_learner(learner_id)
     session = get_session()
 
     return jsonify(
@@ -62,7 +62,7 @@ def get_learner(learner_id: str):
 def get_stats_overview(learner_id: str):
     """按技能拆分的掌握分布、近 N 日趋势、薄弱主题。"""
     params = parse_query(StatsQuery, request.args)
-    _ensure_learner(learner_id)
+    ensure_learner(learner_id)
     session = get_session()
 
     return jsonify(

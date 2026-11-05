@@ -4,4 +4,4 @@
 模块不被 import 就等于路由不存在。分散在各处手动 import 迟早会漏一个，
 表现是接口 404，而代码看着完全正常。
 """
-from api.v1.routes import catalog, health, learners, words  # noqa: F401
+from api.v1.routes import catalog, health, learners, practice, words  # noqa: F401
