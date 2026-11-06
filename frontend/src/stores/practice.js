@@ -20,6 +20,20 @@ import { createSession, finishSession, submitAnswer } from '@/api/practice'
 /** 会话剩余时间不足这个值时提示用户（服务端 TTL 是 2 小时） */
 const EXPIRE_WARN_MS = 5 * 60 * 1000
 
+/**
+ * 后端 SubmitAnswerBody 的硬上限，必须在这里夹住。
+ *
+ * `elapsed_ms: le=600000`、`replay_count: le=20` —— 这是服务端的防御性校验，
+ * 但前端如果不夹，真实场景会踩到：孩子在一道题上想 12 分钟（走神、喝水、
+ * 被叫去吃饭），提交时后端直接 400 VALIDATION_ERROR，
+ * 于是**答对了也显示"请求失败"**，答案丢掉。
+ *
+ * 夹住之后的语义仍然合理：elapsed_ms 记录的是"这道题花的时间"，封顶 10 分钟
+ * 对 SRS 与统计都没有影响（它不参与盒子计算）；replay_count 封顶 20 次同理。
+ */
+const MAX_ELAPSED_MS = 600000
+const MAX_REPLAY = 20
+
 export const usePracticeStore = defineStore('practice', () => {
   const session = ref(null)
   /** 当前题在 items 里的下标（0 起） */
@@ -132,8 +146,8 @@ export const usePracticeStore = defineStore('practice', () => {
         item_id: target,
         answer,
         hint_used: Boolean(hintUsed.value[target]),
-        replay_count: replayCount.value[target] || 0,
-        elapsed_ms: Date.now() - itemStartedAt.value,
+        replay_count: Math.min(replayCount.value[target] || 0, MAX_REPLAY),
+        elapsed_ms: Math.min(Date.now() - itemStartedAt.value, MAX_ELAPSED_MS),
       })
       feedback.value = data
 
