@@ -51,6 +51,14 @@ POS_VALUES: tuple[str, ...] = (
 RANGE_TYPES: tuple[str, ...] = ("unit", "theme", "wrongbook", "all")
 ORDERS: tuple[str, ...] = ("random", "sequential", "weak_first")
 
+# 错词本排序口径。默认 due：错词本的第一诉求是「现在该练哪些」
+WRONGBOOK_SORTS: tuple[str, ...] = ("due", "wrong_count", "recent")
+
+# 错词本手动操作
+ACTION_MASTER = "master"
+ACTION_RESET = "reset"
+WRONGBOOK_ACTIONS: tuple[str, ...] = (ACTION_MASTER, ACTION_RESET)
+
 # 盒子 4 及以上算「复习中」，5 且标记 mastered 算毕业
 REVIEWING_BOX = 4
 MASTER_BOX = 5

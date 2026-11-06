@@ -12,12 +12,22 @@
 """
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any, Mapping, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from api.v1.errors import ValidationFailed
-from core.vocabulary import MODES, ORDERS, RANGE_TYPES, SORTS, STATUSES
+from core.queries import LOCAL_TZ
+from core.vocabulary import (
+    MODES,
+    ORDERS,
+    RANGE_TYPES,
+    SORTS,
+    STATUSES,
+    WRONGBOOK_ACTIONS,
+    WRONGBOOK_SORTS,
+)
 
 
 def _humanize(error: dict[str, Any]) -> dict[str, str]:
@@ -37,6 +47,11 @@ def _humanize(error: dict[str, Any]) -> dict[str, str]:
         return {"field": field, "message": "必须是整数"}
     if kind == "string_too_long":
         return {"field": field, "message": f"长度不能超过 {ctx.get('max_length')} 个字符"}
+    if kind in {"datetime_parsing", "datetime_type", "datetime_from_date_parsing"}:
+        return {
+            "field": field,
+            "message": "必须是 ISO 8601 时间，例如 2026-11-06T23:59:59+08:00",
+        }
     if kind == "missing":
         return {"field": field, "message": "该参数必填"}
     if kind == "value_error":
@@ -196,4 +211,56 @@ class SessionQuery(_Base):
     """查询会话。`include_answers` 只在结果页开，作答中不要开。"""
 
     include_answers: bool = False
+
+
+# ─────────────────────────────────────────────────────────────
+# 错词本
+# ─────────────────────────────────────────────────────────────
+
+
+class WrongbookQuery(PaginationQuery):
+    """错词本列表。
+
+    `skill` 收的是**题型名**（zh_to_en 等），与 /words 接口保持一致 ——
+    前端下拉框里选的是"练什么"，不是"练的是哪种能力"，
+    让前端自己把题型翻译成 spelling 之类的技能名，两边分别维护一张映射表，
+    迟早有一边漏改。换算只在服务端发生一次（见 core/vocabulary.py）。
+    """
+
+    skill: Literal[*MODES] | None = Field(None, description="按题型筛选，不传返回全部技能")
+    due_before: dt.datetime | None = Field(
+        None, description="只返回该时刻前到期的词，ISO 8601"
+    )
+    sort: Literal[*WRONGBOOK_SORTS] = "due"
+
+    @field_validator("due_before", mode="after")
+    @classmethod
+    def _assume_local(cls, value: dt.datetime | None) -> dt.datetime | None:
+        """不带时区的时间按**本地时区**解释。
+
+        `?due_before=2026-11-06T23:59:59` 这种写法在浏览器里很自然，
+        若按 UTC 解释，实际筛选边界会差 8 小时 —— 用户会看到
+        「明明筛的是今天到期，却少了几条」。
+        """
+        if value is not None and value.tzinfo is None:
+            return value.replace(tzinfo=LOCAL_TZ)
+        return value
+
+
+class UpdateWrongbookBody(_Base):
+    """手动改错词本条目的状态。
+
+    `action` 只有两个值，不做 `box` 之类的细粒度调节：
+    用户的心智是「这个词我会了」/「这个词我得重练」，
+    让他去调盒子等级是把内部实现泄漏到界面上。
+    """
+
+    skill: Literal[*MODES]
+    action: Literal[*WRONGBOOK_ACTIONS]
+
+
+class AudioQuery(_Base):
+    """发音接口。口音只有英式/美式两种，不提供"澳音"之类的选项。"""
+
+    accent: Literal["uk", "us"] = "uk"
 

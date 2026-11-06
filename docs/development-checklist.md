@@ -84,7 +84,20 @@
 
 ---
 
-## B5 错词本与发音（E5 + E6）
+## B5 错词本与发音（E5 + E6）✅ 已完成
+
+> 交付：`core/wrongbook.py`（(词,技能) 聚合与口径）、`core/audio.py`（多格式探测 + manifest）、
+> `api/v1/routes/wrongbook.py`（列表 / master / reset）、`api/v1/routes/audio.py`（发音流）、
+> `tools/build_audio.py`（edge-tts 离线批跑）、迁移 `0002_mastered_at`（新增 `mastered_at` 列）。
+> 测试：错词本口径 19 + 接口契约 15 + 发音 12 = **46 项新增，全量 273 项通过**。
+> 实测：50 个词 × 2 口音共 100 个 mp3 已生成；master→列表消失、reset→拉回、幂等、404/400 全部符合契约。
+> 口径固化在 `docs/api-v1-reference.md` 第 8.0 / 9.0 节。
+
+> **两处必须知道的实现取舍**
+> 1. `mastered_this_week` 用新增的 `mastered_at` 列统计，不再拿 `last_seen_at` 近似
+>    —— 后者会把「上周已掌握、本周又答对一次」的词算进本周，数字从第一天就偏高。
+> 2. 发音选 `edge-tts` 而非 `piper-tts`：后者依赖 onnxruntime，在 Python 3.14 上没有可用包。
+>    edge-tts 是在线服务，**仅供个人学习，不得商用**，来源写进 `data/audio/manifest.json`。
 
 | # | 任务 | 作用 | 影响源码 | 不做的后果 | 风险 / 回滚 |
 |---|---|---|---|---|---|
@@ -146,7 +159,7 @@
 | B2 | 数据层与种子词库（6 任务） | ✅ 已完成，118 项测试通过 |
 | B3 | API 骨架与词库接口（9 任务） | ✅ 已完成，157 项测试通过 |
 | B4 | 练习与判题（7 任务） | ✅ 已完成，227 项测试通过 |
-| B5 | 错词本与发音（8 任务） | ⬜ |
+| B5 | 错词本与发音（8 任务） | ✅ 已完成，273 项测试通过 |
 | B6 | 前端工程（5 任务） | ⬜ |
 | B7 | 前端页面（8 任务） | ⬜ |
 | B8 | 测试与上线（5 任务） | ⬜ |
@@ -165,7 +178,7 @@ git ls-files | grep -E '(^|/)config\.py$'    # 必须无输出
 
 # 3. 提交 + 推送
 git add -A
-git commit -m "feat(模块): 说明"
+git commit -m "feat(b5): 错词本与发音接口"    # 前缀带批次号，一眼能对上是哪一批
 git push origin main
 ```
 

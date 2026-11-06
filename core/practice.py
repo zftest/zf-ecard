@@ -391,9 +391,16 @@ def _apply_progress(
     row.correct_count = (row.correct_count or 0) + (1 if correct else 0)
     row.wrong_count = (row.wrong_count or 0) + (0 if correct else 1)
     # 已掌握 = 到第 5 盒且独立答对够 3 次；错一次就退回 active（SRS 已经把它打回第 1 盒）
-    row.status = (
-        "mastered" if is_mastered(row.box_level, row.correct_count) else "active"
-    )
+    new_status = "mastered" if is_mastered(row.box_level, row.correct_count) else "active"
+    if new_status == "mastered" and row.status != "mastered":
+        # 只在「刚刚变成已掌握」时记时间；一直是 mastered 的不刷新，
+        # 否则连续答对会把 mastered_at 一路推后，「本周掌握」就永远只统计最近几天
+        row.mastered_at = moment
+    elif new_status != "mastered":
+        # 答错退回 active：这一列必须跟着清空，否则「本周掌握」会把
+        # 已经被打回重练的词继续算成掌握
+        row.mastered_at = None
+    row.status = new_status
 
     return {
         "skill": item.mode,

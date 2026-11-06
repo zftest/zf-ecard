@@ -258,3 +258,61 @@ def present_finish(summary: dict) -> dict:
     ]
     return payload
 
+
+# ─────────────────────────────────────────────────────────────
+# 错词本
+# ─────────────────────────────────────────────────────────────
+
+
+def present_wrongbook_entry(entry: dict) -> dict:
+    """错词本一行。
+
+    一个单词可能出现在**多行** —— 因为它在不同技能上都错过
+    （拼写写错、听音也没听出来）。这是故意的：
+    合并成一行会让「错 3 次」变成各技能之和，掩盖真正的弱项。
+    行内用 `skill` 区分，前端按技能分组展示即可。
+
+    同一技能下的多个义项则已经合并（见 core/wrongbook.py 的聚合规则），
+    所以「class 的『班级』和『课堂』都错了」只占一行，用 `sense_count` 体现。
+    """
+    return {
+        "word_id": entry["word_id"],
+        "form": entry["form"],
+        "phonetic_uk": entry["phonetic_uk"],
+        "phonetic_us": entry["phonetic_us"],
+        "pos": entry["pos"],
+        "meaning_cn": entry["meaning_cn"],
+        "sense_count": entry["sense_count"],
+        "unit_id": entry["unit_id"],
+        "unit_code": entry["unit_code"],
+        "unit_name": entry["unit_name"],
+        "book": entry["book"],
+        "theme": entry["theme"],
+        "skill": skill_to_mode(entry["skill"]),
+        "box": entry["box"],
+        "wrong_count": entry["wrong_count"],
+        # 错词本里的行一定是 active（查询已排除 mastered），
+        # 所以四态只可能是 learning / reviewing
+        "status": derive_status(entry["box"], "active"),
+        "next_review_at": iso(entry["due_at"]),
+        "is_due": entry["is_due"],
+        "last_wrong_at": iso(entry["last_wrong_at"]),
+        "audio": audio_flags(entry["word_id"]),
+    }
+
+
+def present_wrongbook_update(result: dict) -> dict:
+    """手动操作的结果。`master` 之后 `next_review_at` 必须是 null。"""
+    db_status = result["status"]
+    return {
+        "word_id": result["word_id"],
+        "skill": skill_to_mode(result["skill"]),
+        "status": (
+            "mastered" if db_status == "mastered" else derive_status(result["box"], db_status)
+        ),
+        "box": result["box"],
+        "next_review_at": iso(result["next_review_at"]),
+        "updated_at": iso(result["updated_at"]),
+        "affected_senses": result["affected_senses"],
+    }
+

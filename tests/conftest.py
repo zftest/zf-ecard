@@ -199,12 +199,27 @@ def seeded_db(db):
 
 
 @pytest.fixture()
-def api_app(tmp_path, seeded_db):
+def api_app(tmp_path, seeded_db, monkeypatch):
     """挂着**已灌种子词库**的临时库的 Flask 实例。
 
     关键是 DB_PATH 注入：否则 create_app 会连上真实的 data/app.db，
     测试就可能读到、甚至改坏用户自己的数据。
+
+    音频目录同样要隔离，而且是**空目录**：
+        发音是否可用是「看文件在不在」判断的（见 core/audio.py）。
+        不隔离的话，开发机上只要跑过一次 tools/build_audio.py，
+        「没有音频时应该给出降级警告」这条测试就会开始失败 ——
+        测试结果取决于你有没有生成过音频，这是最难查的那类不稳定。
+        需要音频的用例，自己在 tests/test_audio_api.py 里覆盖这个路径。
     """
+    from core import audio as audio_module
+
+    empty_audio = tmp_path / "audio"
+    empty_audio.mkdir()
+    monkeypatch.setattr(audio_module, "AUDIO_DIR", str(empty_audio))
+    monkeypatch.setattr(audio_module, "MANIFEST_PATH", str(empty_audio / "manifest.json"))
+    audio_module._manifest_cache["key"] = None
+
     application = app_module.create_app(
         {
             "DB_PATH": seeded_db.path,

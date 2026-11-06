@@ -1,3 +1,9 @@
 # 开发/测试依赖（生产环境只需 requirements.txt）
 -r requirements.txt
 pytest>=8.0
+
+# 批量生成发音（tools/build_audio.py 用）。
+# 放在 dev 而不是生产清单里，是因为**运行时不依赖它**：
+# 发音接口只读 data/audio 下的现成文件，不在这里合成。
+# 另外 piper-tts 依赖 onnxruntime，在 Python 3.14 上没有可用包，故不用它。
+edge-tts>=6.1

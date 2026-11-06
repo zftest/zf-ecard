@@ -387,6 +387,12 @@ class SkillProgress(Base):
     last_seen_at: Mapped[dt.datetime | None] = mapped_column(
         UTCDateTime, nullable=True
     )
+    # 变成「已掌握」的时刻。没有这一列，「本周掌握 N 个」就只能拿
+    # last_seen_at 近似 —— 而一个上周就掌握、本周又答对一次的词会被
+    # 算进本周，指标从第一天起就是说谎的。从未掌握过则为 NULL。
+    mastered_at: Mapped[dt.datetime | None] = mapped_column(
+        UTCDateTime, nullable=True
+    )
     # active / mastered / ignored —— ignored 供家长手动把「人名/生僻词」踢出错词本
     status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="active"

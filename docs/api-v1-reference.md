@@ -1,16 +1,16 @@
 # zf-ecard `/api/v1` 接口文档
 
-> 版本：v1.2
-> 日期：2026-11-05（v1.2：B4 完成「练习与判题」4 个接口，补第 7.5 节判题口径）
+> 版本：v1.3
+> 日期：2026-11-06（v1.3：B5 完成「错词本 2 接口 + 发音接口」，重写第 8、9 节并补齐聚合口径）
 > 服务基址（开发）：`http://127.0.0.1:5000`
 > 服务基址（生产）：同 Flask 端口，SPA 挂在 `/app/`
 > 关联文档：`docs/architecture-frontend-backend-separation.md`
 
 ---
 
-## 实现状态（2026-11-05，B4 完成）
+## 实现状态（2026-11-06，B5 完成）
 
-已实现并通过测试（227 项，其中判题/抽题单测 47 项、练习接口 23 项）：
+已实现并通过测试（**273 项**）：
 
 | 接口 | 状态 |
 |---|---|
@@ -25,8 +25,12 @@
 | `GET /api/v1/practice/sessions/{session_id}` | ✅ |
 | `POST /api/v1/practice/sessions/{session_id}/answers` | ✅ |
 | `POST /api/v1/practice/sessions/{session_id}/finish` | ✅ |
-| `GET /api/v1/learners/{learner_id}/wrongbook`（第 8 节） | ⬜ B5 |
-| `GET /api/v1/audio/{word_id}`（第 9 节） | ⬜ B6 |
+| `GET /api/v1/learners/{learner_id}/wrongbook`（第 8 节） | ✅ B5 |
+| `PATCH /api/v1/learners/{learner_id}/wrongbook/{word_id}`（第 8 节） | ✅ B5 |
+| `GET /api/v1/audio/{word_id}`（第 9 节） | ✅ B5 |
+| 第 10 节起的导入类接口 | ⬜ P1，MVP 不做 |
+
+测试分布：旧功能契约 28 + 数据层 118 + 练习/判题 70 + 错词本 34 + 发音 12 + 其它。
 
 ### 三处契约修正（以本文档为准，前端按这里写）
 
@@ -1211,6 +1215,34 @@ curl -X POST http://127.0.0.1:5000/api/v1/practice/sessions/ps_9f2c1a7b/finish \
 
 ## 8. 错词本
 
+> 实现：`core/wrongbook.py`（聚合与口径）、`api/v1/routes/wrongbook.py`（接口）
+> 测试：`tests/test_wrongbook.py`（19 项口径）+ `tests/test_wrongbook_api.py`（15 项契约）
+
+### 8.0 两个必须先钉死的口径
+
+**口径一：一行 = 一个词 × 一个技能，不是一个词。**
+
+数据源是 `skill_progress`，主键含义项与技能。「environment 拼写错了」和
+「environment 听音没听出来」是两件事，合并成一行会让「错 3 次」变成各技能之和，
+掩盖真正的弱项。所以同一单词可能出现在多行，用 `skill` 区分。
+
+同一技能下的**多个义项**合并成一行，规则如下：
+
+| 字段 | 合并规则 | 为什么这么定 |
+|---|---|---|
+| `wrong_count` | 跨义项求和 | 这个词这个技能一共错了几次，是事实累加 |
+| `box` | 取**最小** | 最弱的义项才代表真实掌握度。取最大会显示「快毕业了」，而某个义项一次都没会过 |
+| `next_review_at` | 取**最早** | 最早到期的那个决定「现在该不该复习」 |
+| `meaning_cn` | 取「错的义项里顺序最前」的那个 | 只错第二个义项时，显示主义项释义会让人对不上自己错在哪 |
+| `sense_count` | 涉及义项数 | 前端可提示「这个词有 2 个意思都错」 |
+
+**口径二：`summary` 是角标，不随 `due_before` 缩水。**
+
+`due_before` 是翻页浏览用的时间窗。角标若跟着它变，用户一筛「只看今天到期」，
+侧边栏「错词 9 个」立刻变成「6 个」，他会以为自己弄丢了词。
+所以 `summary` 只跟随 `skill` 这一维筛选，`pagination.total` 才是筛选后的列表长度
+——两者不一致是**设计如此**，不是 bug。
+
 ### 8.1 错词本列表
 
 **接口名**：`listWrongbook`
@@ -1221,16 +1253,22 @@ curl -X POST http://127.0.0.1:5000/api/v1/practice/sessions/ps_9f2c1a7b/finish \
 
 | 参数 | 类型 | 必填 | 默认 | 取值/区间 | 注释 |
 |---|---|---|---|---|---|
-| `due_before` | string | 否 | 空 | ISO 8601 | 只返回该时间点前到期的词；不传返回全部 |
-| `skill` | string | 否 | 空 | 见 2.5 | 筛选技能维度 |
-| `sort` | string | 否 | `due` | `due` / `wrong_count` / `recent` | `due` 按到期时间升序 |
+| `skill` | string | 否 | 空 | `zh_to_en` / `audio_to_en` / `en_to_zh` / `phonetic_to_en` | **题型名，不是库里的技能名**。服务端负责换算 |
+| `due_before` | string | 否 | 空 | ISO 8601 | 只返回该时刻前到期的词。**不带时区时按本地时区解释** |
+| `sort` | string | 否 | `due` | `due` / `wrong_count` / `recent` | `due` 已到期在前，其次按到期时间升序 |
 | `page` | int | 否 | 1 | ≥ 1 | |
 | `page_size` | int | 否 | 20 | 1-100 | |
 
 **请求 demo**
 
 ```bash
-curl "http://127.0.0.1:5000/api/v1/learners/lrn_default/wrongbook?due_before=2026-11-03T23:59:59%2B08:00&sort=due"
+curl "http://127.0.0.1:5000/api/v1/learners/default/wrongbook?due_before=2026-11-06T23:59:59%2B08:00&sort=due"
+```
+
+```javascript
+const { data } = await axios.get('/api/v1/learners/default/wrongbook', {
+  params: { skill: 'zh_to_en', sort: 'due', page: 1, page_size: 20 },
+});
 ```
 
 **成功返回** `200`
@@ -1239,37 +1277,49 @@ curl "http://127.0.0.1:5000/api/v1/learners/lrn_default/wrongbook?due_before=202
 {
   "items": [
     {
-      "word_id": "w_0001",
+      "word_id": 12,
       "form": "environment",
       "phonetic_uk": "/ɪnˈvaɪrənmənt/",
-      "meaning_cn": "环境",
+      "phonetic_us": "/ɪnˈvaɪrənmənt/",
       "pos": "n.",
+      "meaning_cn": "环境",
+      "sense_count": 1,
+      "unit_id": 3,
+      "unit_code": "U03",
       "unit_name": "Unit 3",
+      "book": "人教版 2024 七年级上册",
+      "theme": "自然",
       "skill": "zh_to_en",
       "box": 1,
       "wrong_count": 3,
       "status": "learning",
       "next_review_at": "2026-11-03T00:00:00+08:00",
       "is_due": true,
-      "last_wrong_at": "2026-11-02T19:20:00+08:00"
+      "last_wrong_at": "2026-11-02T19:20:00+08:00",
+      "audio": { "uk": true, "us": true }
     }
   ],
   "pagination": { "page": 1, "page_size": 20, "total": 9, "total_pages": 1 },
-  "summary": { "total": 9, "due_today": 6, "mastered_this_week": 4 }
+  "summary": { "total": 11, "due_today": 6, "mastered_this_week": 4 }
 }
 ```
 
 | 字段 | 说明 |
 |---|---|
-| `is_due` | 是否已到复习时间。前端据此决定是否给「现在复习」高亮 |
-| `summary.due_today` | 今日待复习数，用于侧边栏角标 |
+| `is_due` | `next_review_at <= now`。前端据此决定是否高亮「现在复习」 |
+| `last_wrong_at` | 最近一次**答错**的时间。若该词最后一次是答对（但仍因历史错误留在错词本），为 `null` |
+| `audio` | `{uk, us}` 是否有音频文件。`false` 时前端用设备语音并标注「演示」 |
+| `summary.due_today` | 今日待复习条数，按**本地自然日**切天，用于侧边栏角标 |
+| `summary.mastered_this_week` | 本周（周一起算）新掌握的条数，按 `mastered_at` 统计 |
+
+**失败返回** `400`（参数非法）/ `404`（learner 不存在）
 
 ---
 
 ### 8.2 更新错词状态
 
 **接口名**：`updateWrongbookEntry`
-**作用**：手动标记「已掌握」（移出错词本），或把状态重置回盒子 1。用于用户自己判断「这个词我其实会」的场景。
+**作用**：手动标记「已掌握」（移出错词本），或重置回第 1 盒重练。
 **请求地址**：`PATCH /api/v1/learners/{learner_id}/wrongbook/{word_id}`
 
 **路径参数**
@@ -1277,37 +1327,49 @@ curl "http://127.0.0.1:5000/api/v1/learners/lrn_default/wrongbook?due_before=202
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | `learner_id` | string | 是 | 学习者 |
-| `word_id` | string | 是 | 单词 |
+| `word_id` | int | 是 | 单词 ID（整数，不是 `w_0001`） |
 
 **请求体**
 
 | 参数 | 类型 | 必填 | 取值 | 注释 |
 |---|---|---|---|---|
-| `skill` | string | 是 | 见 2.5 | 只改这个技能维度的状态 |
-| `action` | string | 是 | `master` / `reset` | `master` 移到已掌握；`reset` 回盒子 1 |
+| `skill` | string | 是 | 见 8.1 | 题型名。只改这个技能维度 |
+| `action` | string | 是 | `master` / `reset` | `master` 移到已掌握；`reset` 回盒子 1 并立刻到期 |
 
 **请求 demo**
 
 ```bash
-curl -X PATCH http://127.0.0.1:5000/api/v1/learners/lrn_default/wrongbook/w_0001 \
-  -H "Content-Type: application/json" \
-  -d '{ "skill": "zh_to_en", "action": "master" }'
+curl -X PATCH http://127.0.0.1:5000/api/v1/learners/default/wrongbook/12   -H "Content-Type: application/json"   -d '{ "skill": "zh_to_en", "action": "master" }'
 ```
 
 **成功返回** `200`
 
 ```json
 {
-  "word_id": "w_0001",
+  "word_id": 12,
   "skill": "zh_to_en",
   "status": "mastered",
   "box": 5,
   "next_review_at": null,
-  "updated_at": "2026-11-03T10:20:00+08:00"
+  "updated_at": "2026-11-06T11:18:11+08:00",
+  "affected_senses": 1
 }
 ```
 
-**失败返回** `404`
+| 字段 | 说明 |
+|---|---|
+| `next_review_at` | `master` 后**一定是 `null`**：已掌握的词没有下次复习。库里 `due_at` 保留原值不动，只是不再展示 |
+| `affected_senses` | 本次实际改动的义项数。第二次点同一个「已掌握」会返回 `0` |
+
+**三条行为约定**
+
+1. **动作作用于该 (词, 技能) 下的全部义项。** 只改一个义项会出现「点了已掌握，这个单词还在列表里」。
+2. **`master` 幂等。** 已经掌握再点一次返回 `200` + `affected_senses: 0`，不报 404。
+3. **`reset` 对已掌握的词也生效**，语义是「取消掌握、拉回来重练」。错词本列表里看不到已掌握的词，但用户可能在某天发现「他其实还是不会」，这是唯一补救入口 —— 若不允许，这种词的 `due_at` 会一直往后推，永远不会再被抽到。
+
+**失败返回**
+
+`404`（该词在该技能上从未错过）/ `400`（`action` / `skill` 非法）
 
 ```json
 { "error": { "code": "NOT_FOUND", "message": "该词不在此技能维度的错词本中" }, "request_id": "22334455" }
@@ -1317,28 +1379,56 @@ curl -X PATCH http://127.0.0.1:5000/api/v1/learners/lrn_default/wrongbook/w_0001
 
 ## 9. 发音
 
+> 实现：`core/audio.py`（探测与 manifest）、`api/v1/routes/audio.py`（接口）
+> 音频生成：`tools/build_audio.py`（**离线批跑，接口内不合成**）
+> 测试：`tests/test_audio_api.py`（12 项）
+
+### 9.0 发音从哪来（先读这段）
+
+**接口只读本地文件，绝不在请求里合成。** TTS 合成一次几百毫秒到几秒，放进请求链路
+意味着第一个词要等、网络抖动整页卡住、并发几个词就排队。而合成**只做一次**，
+之后永远是读文件。
+
+音频由离线工具生成：
+
+```bash
+python tools/build_audio.py --dry-run    # 先看计划，不写文件
+python tools/build_audio.py              # 生成全部词（默认英音 + 美音）
+python tools/build_audio.py --limit 20   # 只做前 20 个词
+python tools/build_audio.py --overwrite  # 已有文件也重新生成
+```
+
+**为什么是 edge-tts，不是 Piper：** `piper-tts` 依赖 `onnxruntime`，在 Python 3.14
+上没有可用 wheel，实测装不上；`edge-tts` 依赖纯 Python，输出就是 mp3。代价是它
+**调用微软 Edge 的在线朗读服务**，需要联网，只适合个人学习用途，**不得商用**。
+来源与许可会写进 `data/audio/manifest.json`，可追溯。
+
+**支持多格式**：探测顺序 `mp3 → m4a → ogg → wav`，按实际文件返回对应 MIME。
+不硬编码 `audio/mpeg` 是因为来源会换（edge-tts 出 mp3、Wikimedia 是 ogg、
+Windows SAPI 是 wav）；写死 mp3 的话，某天换来源会静默播不出来，而文件就在磁盘上。
+
 ### 9.1 获取发音
 
 **接口名**：`getWordAudio`
-**作用**：返回单词指定口音的 mp3 二进制流。按「本地缓存 → Wikimedia CC0/CC BY → Piper 本地合成」三层降级，全失败返回 404。
+**作用**：返回单词指定口音的音频二进制流。
 **请求地址**：`GET /api/v1/audio/{word_id}`
 
 **路径参数**
 
 | 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
-| `word_id` | string | 是 | 单词 ID |
+| `word_id` | int | 是 | 单词 ID（整数） |
 
 **查询参数**
 
 | 参数 | 类型 | 必填 | 默认 | 取值 | 注释 |
 |---|---|---|---|---|---|
-| `accent` | string | 否 | `uk` | `uk` / `us` | 英式/美式 |
+| `accent` | string | 否 | `uk` | `uk` / `us` | 英式/美式。**互不顶替**：只有英音时请求美音返 404 |
 
 **请求 demo**
 
 ```bash
-curl -X GET "http://127.0.0.1:5000/api/v1/audio/w_0001?accent=uk" --output word.mp3
+curl -X GET "http://127.0.0.1:5000/api/v1/audio/12?accent=uk" --output word.mp3
 ```
 
 ```javascript
@@ -1348,23 +1438,32 @@ const src = `/api/v1/audio/${wordId}?accent=uk`;
 
 **成功返回** `200`
 
-- `Content-Type: audio/mpeg`
-- `Content-Length`: 文件字节数
+- `Content-Type`：按实际格式，`audio/mpeg` / `audio/ogg` / `audio/wav` / `audio/mp4`
+- `Content-Length`：文件字节数
 - `Cache-Control: public, max-age=31536000, immutable`
-- `X-Audio-Source`: `cache` / `wikimedia` / `piper`（用于排查来源）
+- `X-Audio-Source`：`edge-tts` / `wikimedia` / `piper` / `cache`
+  （`cache` = 有文件但 manifest 未记录来源，用于排障）
+- 支持 `Range` 请求，返回 `206`。拖动播放进度条时只取需要的字节
 
 **失败返回** `404`
 
 ```json
-{ "error": { "code": "AUDIO_NOT_AVAILABLE", "message": "该词暂无发音，可改用设备语音" }, "request_id": "33445566" }
+{ "error": { "code": "AUDIO_NOT_AVAILABLE", "message": "该词暂无英式发音，可改用设备语音" }, "request_id": "33445566" }
 ```
 
-**前端降级要求**：收到 404 后，**不要**弹全局错误。应展示音标文本，并把播放按钮切到「设备语音（演示）」态，用 `SpeechSynthesis` 兜底，且**明确标注这不是真人发音**——原型里已经这么做，迁移时保留。
+**前端降级要求**：收到 404 后**不要弹全局错误**。应展示音标文本，把播放按钮切到
+「设备语音（演示）」态，用 `SpeechSynthesis` 兜底，并**明确标注这不是真人发音**
+——原型里已经这么做，迁移时保留。
 
-**为什么用 302/流而不是返回 URL**：
-- 返回流可以用 `Cache-Control: immutable` 让浏览器永久缓存，第二次播放零请求
-- 音频来源可能随时从 Pipler 切到 Wikimedia，URL 会变；接口地址不变
+**为什么返回流而不是 JSON 里给 URL**：
+
+- 流 + `immutable` 能让浏览器永久缓存，第二次播放零请求
+- 音频来源可能随时从 edge-tts 切到别的，URL 会变；接口地址不变
 - 不暴露文件系统的真实路径
+
+**为什么「词不存在」也返 404 `AUDIO_NOT_AVAILABLE`**：对前端来说，「词不存在」和
+「词没音频」的处理方式完全一样（切设备语音）。分成两个状态码只会让前端多写一个
+永远走不到的分支。
 
 ---
 
