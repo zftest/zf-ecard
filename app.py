@@ -498,6 +498,13 @@ def create_app(config_object=None):
 
     register_api_v1(app)
 
+    # ── 前端 SPA（Vue3 构建产物）──────────────────────────────
+    # 必须在旧路由与 API 蓝图之后注册：SPA 的 /app/<path:filename>
+    # 是一个兜底规则，先注册会抢走别的路径。
+    from spa import register_spa
+
+    register_spa(app)
+
     return app
 
 

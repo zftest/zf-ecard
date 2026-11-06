@@ -225,8 +225,8 @@ def test_endpoint_names_unchanged(app):
 def test_route_count_is_seven(app):
     """旧路由数量固定为 7。新增功能必须走 /api/v1，不得往这里塞。
 
-    /api/v1 的路由被显式排除，否则每加一个新接口这条断言就会红一次，
-    最后一定会被人改成「== 14」「== 21」而失去意义。
+    /api/v1 与 /app（前端 SPA）的路由被显式排除，否则每加一个新接口
+    这条断言就会红一次，最后一定会被人改成「== 14」「== 21」而失去意义。
     这里要守的是**旧接口不增不减**，不是"全站路由总数"。
     """
     legacy = [
@@ -234,8 +234,22 @@ def test_route_count_is_seven(app):
         for rule in app.url_map.iter_rules()
         if not rule.rule.startswith("/static")
         and not rule.rule.startswith("/api/v1")
+        and not rule.rule.startswith("/app")
     ]
     assert len(legacy) == 7, [r.rule for r in legacy]
+
+
+def test_spa_routes_are_namespaced(app):
+    """前端 SPA 只允许占用 /app 一个前缀，且只有入口 + 通配两条主规则。
+
+    单独断言而不是"排除后仍是 7 个"：SPA 的 /app/<path:filename> 是兜底规则，
+    一旦有人把它的前缀改宽（比如改成 `<path:filename>`），
+    旧路由会被它悄悄吃掉 —— 而"旧路由仍是 7 个"这个断言**照样绿**。
+    """
+    spa_rules = sorted(
+        rule.rule for rule in app.url_map.iter_rules() if rule.rule.startswith("/app")
+    )
+    assert spa_rules == ["/app", "/app/", "/app/<path:filename>"]
 
 
 def test_api_v1_routes_are_namespaced(app):

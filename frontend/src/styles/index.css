@@ -1,0 +1,4 @@
+/* 样式入口。顺序不能换：
+   tokens 先定义变量，base 才能引用；组件内 scoped 样式最后生效。 */
+@import './tokens.css';
+@import './base.css';

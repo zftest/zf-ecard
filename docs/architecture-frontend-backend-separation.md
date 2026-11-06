@@ -101,16 +101,24 @@ knowledge-card-generato-main/
 │   ├── vite.config.js              # + base:"/app/", proxy /api/v1 → 5000
 │   ├── index.html                  # +
 │   └── src/
-│       ├── main.js                 # +
-│       ├── App.vue                 # +
-│       ├── router/index.js         # + createWebHistory('/app/')
-│       ├── api/{client.js,words.js,practice.js,wrongbook.js,imports.js}  # +
-│       ├── stores/{learner.js,words.js,practice.js,wrongbook.js}         # +
-│       ├── styles/{tokens.css,base.css}                                   # + 迁自 prototype/
-│       ├── components/             # + 8 个基础组件
+│       ├── main.js                 # + 挂 pinia/router，注册全局错误监听
+│       ├── App.vue                 # + 应用外壳：侧栏 / 顶栏 / 底部标签 / 专注模式
+│       ├── router/
+│       │   ├── index.js            # + createWebHistory('/app/')，8 条路由全懒加载
+│       │   └── navigation.js       # + 导航配置（侧栏与底部标签共读一份）
+│       ├── api/
+│       │   ├── client.js           # + axios 实例 + 拦截器 + 重试策略
+│       │   ├── errors.js           # + 错误码 -> 中文，白名单静默
+│       │   ├── query.js            # + 查询参数规范化（null / 数组 -> 逗号）
+│       │   └── words|practice|wrongbook|learners|audio|system.js  # +
+│       ├── stores/{learner,catalog,practice,wrongbook}.js          # +
+│       ├── styles/{tokens,base,index}.css                          # + 迁自 prototype/
+│       ├── composables/useToast.js  # + 模块级单例，供拦截器调用
+│       ├── components/             # + 8 个基础组件 + PageStub
 │       └── views/                  # + 8 个页面（对应 prototype 8 视图）
 │
-├── static/spa/                     # + 构建产物（gitignore）
+├── frontend/dist/                  # + 构建产物（gitignore，沿用 Vite 默认输出目录）
+├── spa.py                          # + /app/ 静态托管 + history 回落
 ├── data/                           # + ecard.db / audio/ / seed/（gitignore）
 └── tests/                          # + pytest
 ```
@@ -141,10 +149,10 @@ knowledge-card-generato-main/
        ├─ /poster/<id>         → Jinja 旧海报页（不变）
        ├─ /api/generate        → 旧 JSON API（冻结，不再改）
        ├─ /api/v1/*            → 新 REST API
-       └─ /app/*               → static/spa 静态文件 + history fallback
+       └─ /app/*               → frontend/dist 静态文件 + history 回落（spa.py）
 ```
 
-- 前端 `npm run build` → 产物落在 `static/spa/`
+- 前端 `npm run build` → 产物落在 `frontend/dist/`（产物不入库）
 - 后端单进程托管，无需 Nginx、无需 Node 运行时
 
 ### 2.3 为什么这样切分是"真分离"
@@ -393,39 +401,58 @@ logging.basicConfig(
 
 ### 4.2 路由表
 
-| 路径 | 视图 | 对应原型 |
-|---|---|---|
-| `/app/` | `DashboardView` | 学习首页 |
-| `/app/words` | `WordListView` | 单词库 |
-| `/app/practice/setup` | `PracticeSetupView` | 分类默写设置 |
-| `/app/practice/run` | `PracticeRunView` | 答题 |
-| `/app/practice/result` | `PracticeResultView` | 结果 |
-| `/app/wrongbook` | `WrongbookView` | 错词本 |
-| `/app/import` | `ImportView` | 词库导入 |
-| `/app/settings` | `SettingsView` | 设置 |
+| 路径 | 视图 | 对应原型 | 备注 |
+|---|---|---|---|
+| `/app/` | `DashboardView` | 学习首页 | |
+| `/app/words` | `WordsView` | 单词库 | |
+| `/app/config` | `ConfigView` | 分类默写设置 | |
+| `/app/practice` | `PracticeView` | 答题 | `meta.focus`，隐藏全部导航 |
+| `/app/result` | `ResultView` | 结果 | `meta.focus`，数据来自 finish 接口 |
+| `/app/wrongbook` | `WrongbookView` | 错词本 | |
+| `/app/import` | `ImportView` | 词库导入 | MVP 只做文件校验 |
+| `/app/settings` | `SettingsView` | 设置 | |
 
-### 4.3 SPA 兜底路由（唯一需要小心的地方）
+**与上一版草案的偏离**：草案把练习拆成 `/practice/setup`、`/practice/run`、`/practice/result`
+三个同级路径。实现改成了 `/config`、`/practice`、`/result` 三个平级路径，理由有两个：
 
-```python
-def register_spa_routes(app):
-    SPA_DIR = os.path.join(app.root_path, "static", "spa")
+1. 原型的 8 个视图就是 8 个平级页面，路由与视图一一对应，验收时对着原型点一遍即可对账；
+2. `setup` 与 `run`/`result` 不是同一层级的东西 —— 前者是随时可独立进入的配置页，
+   后两者是同一次会话的前后两段。硬放进 `/practice/*` 会让人以为 `run` 必须带会话参数，
+   实际上会话状态在 `practice` store 里，URL 不需要承载。
 
-    @app.route("/app/", defaults={"path": ""})
-    @app.route("/app/<path:path>")
-    def spa(path):
-        # 绝不能把 /api 吃进来
-        if path == "api" or path.startswith("api/"):
-            abort(404)
-        target = os.path.join(SPA_DIR, path)
-        if path and os.path.isfile(target):
-            return send_from_directory(SPA_DIR, path)
-        return send_from_directory(SPA_DIR, "index.html")   # history fallback
+### 4.3 SPA 静态托管（`spa.py`）
+
+实现见 `spa.py`，注册在 `create_app()` 的最后一步（必须在所有蓝图之后，
+否则 `/app/<path:filename>` 会抢走别的路径）。
+
+**决策逻辑就三条：**
+
+```
+/app/<path> 有对应文件        → 返回文件，Cache-Control: immutable（文件名带 hash）
+/app/<path> 无文件且带资源后缀 → 404          ← 关键
+/app/<path> 其余情况          → 返回 index.html，no-cache（交给前端路由）
 ```
 
-三个安全点：
-- 前缀锁死 `/app/`，旧路由不受影响
-- `send_from_directory` 自带路径穿越防护（`../` 会被拒绝）
-- `static/spa/` 不存在时（未构建）返回明确的 503 提示，而不是 500
+**为什么第二条必须单独判**：缺失的 `.js` 如果回落成 index.html，浏览器会拿一段 HTML
+当 JS 执行，报 `Uncaught SyntaxError: Unexpected token '<'`。这个报错和真正的原因
+（资源没打进产物）完全不像，能白白查半天。所以这里按后缀区分，
+`.js/.css/.map/.woff2/.png` 等找不到就老实 404。
+
+**其它三个细节：**
+
+| 细节 | 做法 | 不这么做会怎样 |
+|---|---|---|
+| `/app` 无尾斜杠 | 308 重定向到 `/app/` | 相对路径资源会解析到 `/assets/` 而不是 `/app/assets/`，整页样式脚本全 404 |
+| `Cache-Control` 分两档 | 产物 `immutable` + 1 年；`index.html` `no-cache` | 全不缓存：每次访问重下几百 KB；全缓存：发版后用户还引用着已删除的 hash 文件 |
+| 含 `..` 的路径 | 显式 `abort(404)` | `send_from_directory` 确实挡得住，但会命中兜底返回 index.html（200），扫描器试穿越在日志里看不出 |
+
+**产物未构建时**：返回一张写出 `npm install && npm run build` 的说明页（200），
+不是 404 也不是 503。理由：新机器 clone 下来还没构建是最常见的场景，
+这时给人一个 404 会让人去查路由配置，方向完全错了。
+
+四个问题都有对应的测试（`tests/test_spa.py`，13 项）：
+入口返回 index、资源带 immutable、客户端路由回落、缺失资源 404、无尾斜杠重定向、
+产物缺失说明页、路径穿越拦截、旧路由与 `/api/v1` 不被吃掉、产物目录可配置。
 
 ### 4.4 前端必须预埋的自动化钩子
 

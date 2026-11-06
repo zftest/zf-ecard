@@ -1,0 +1,139 @@
+/* =========================================================
+   基础样式（reset + 全局默认）
+   只放"所有页面都成立"的规则；任何和某个组件有关的样式
+   都写在组件自己的 <style scoped> 里，避免这里长成第二个 styles.css。
+   ========================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  /* 移动端 Safari 横屏时会放大字号，破坏排版节奏 */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 表单控件默认不继承字体，中文会掉回系统默认宋体 */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+figure {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: var(--leading-tight);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img,
+svg,
+audio {
+  display: block;
+  max-width: 100%;
+}
+
+/* 点击时不要出现灰色高亮块（移动端 Safari/Chrome 默认行为） */
+button,
+a,
+input,
+label {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* 键盘焦点必须可见。用 :focus-visible 而不是 :focus，
+   这样鼠标点击按钮不会出现难看的描边，但 Tab 键走位一定看得见。 */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* 屏幕阅读器专用文本：视觉不可见，但会被读出来。
+   用于给纯图标按钮补无障碍名称。 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* 尊重系统的「减少动态效果」设置。
+   这个项目的页面切换有位移与淡入，对前庭敏感人群不友好；
+   系统开了这个开关就必须退化成无动画，而不是"稍微快一点"。 */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* 数字对齐：结果页统计、题号、盒子等级
+   全部用等宽数字，避免 1 和 7 宽度不同导致数字跳动 */
+.tabular {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
