@@ -21,6 +21,12 @@ export default defineConfig({
     },
   },
   server: {
+    // 显式绑 127.0.0.1。
+    // 不写的话 Vite 默认 host 是 'localhost'，而 Node 18+ 的 localhost
+    // 会优先解析到 IPv6 的 ::1 —— 结果只有 http://localhost:5173 能开，
+    // http://127.0.0.1:5173 直接连接被拒。本项目其他地方一律用 127.0.0.1，
+    // 这个差异会让人以为"前端起不来"。
+    host: '127.0.0.1',
     port: 5173,
     // 开发期走代理，浏览器里同源，不需要后端开 CORS。
     // 生产由 Flask 同端口提供 /api 与 /app/*，同样没有跨域。

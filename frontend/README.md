@@ -108,4 +108,5 @@ src/
 | 控制台 `Unexpected token '<'` | 缺失的 `.js` 被回落成 index.html | `spa.py` 已按后缀区分，缺资源直接 404 |
 | 刷新 `/app/words` 得到 404 | 服务端没做 history 回落 | 检查 `spa.py` 是否注册 |
 | 控制台一条 favicon 404 | 没写 `<link rel="icon">` | `index.html` 里已内联 SVG 图标 |
+| `http://127.0.0.1:5173` 打不开、`localhost:5173` 能开 | Vite 默认 host 是 `localhost`，Node 18+ 优先解析成 IPv6 `::1` | `vite.config.js` 已固定 `host: '127.0.0.1'` |
 | `npm install` 卡住或 502 | 环境变量里有坏代理 | `env -u http_proxy -u https_proxy npm install` |

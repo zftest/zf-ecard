@@ -69,7 +69,8 @@ function onClick(event) {
 }
 
 .chip--md {
-  min-height: 34px;
+  /* 36 + 4 + 4 = 44，命中区刚好达标；34 就凑不出来了 */
+  min-height: 36px;
   padding: 0 var(--space-3);
 }
 
@@ -136,11 +137,15 @@ function onClick(event) {
   opacity: 0.45;
 }
 
-/* 34px 的胶囊在平板上偏小，撑到 44px 命中区（同 AppButton 的做法） */
+/* 视觉 36px 的胶囊在平板上偏小，撑到 44px 命中区（同 AppButton 的做法）。
+
+   扩展量必须和 chip 行间距对齐：相邻两行之间的 gap 是 --space-2 (8px)，
+   上下各扩 4px 刚好填满、不重叠。如果扩 5px，两行会重叠 2px ——
+   点上一行的下半部分会触发下一行的 chip，这种错点极难复现、极难归因。 */
 .chip--md.chip--selectable::after {
   content: '';
   position: absolute;
-  inset: -5px -2px;
+  inset: -4px -2px;
   border-radius: inherit;
 }
 </style>
